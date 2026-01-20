@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Bookings - Catering</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <a href="{{ url_for('catering.catering_home') }}" class="btn btn-secondary btn-sm mb-1">&larr; Back</a>
+            <h3 class="mb-1">Manage Bookings</h3>
+        </div>
+
+        <button class="btn btn-warning btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#addBookingModal">
+            + Add Booking
+        </button>
+    </div>
+
+    <!-- Bookings Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle" id="bookingsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40px;">ID</th>
+                            <th>Customer</th>
+                            <th>Event Date</th>
+                            <th>Event Time</th>
+                            <th>Items Requested</th>
+                            <th>Status</th>
+                            <th style="width: 200px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for booking in bookings %}
+                        <tr id="bookingRow{{ booking.id }}">
+                            <td>{{ booking.id }}</td>
+                            <td>
+                                <div class="fw-bold">{{ booking.requestor_name }}</div>
+                                {% if booking.customer_address %}
+                                <div class="text-muted" style="font-size: 0.85rem;">{{ booking.customer_address }}</div>
+                                {% endif %}
+                                {% if booking.contact_number %}
+                                <div class="text-muted" style="font-size: 0.85rem;">{{ booking.contact_number }}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.event_date.strftime('%b %d, %Y') if booking.event_date else '' }}</td>
+                            <td>{{ booking.event_time.strftime('%I:%M %p') if booking.event_time else '' }}</td>
+                            <td style="white-space: pre-line; font-size: 0.9rem;">{{ booking.items_requested }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if booking.status == 'Confirmed' %}bg-success
+                                    {% elif booking.status == 'Pending' %}bg-warning
+                                    {% elif booking.status == 'Cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ booking.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-warning btn-sm edit-btn"
+                                        data-id="{{ booking.id }}"
+                                        data-name="{{ booking.requestor_name }}"
+                                        data-address="{{ booking.customer_address or '' }}"
+                                        data-contact="{{ booking.contact_number or '' }}"
+                                        data-email="{{ booking.email_address or '' }}"
+                                        data-date="{{ booking.event_date.isoformat() if booking.event_date else '' }}"
+                                        data-time="{{ booking.event_time.strftime('%H:%M') if booking.event_time else '' }}"
+                                        data-items="{{ booking.items_requested }}"
+                                        data-status="{{ booking.status }}">
+                                    Edit
+                                </button>
+                                <a href="{{ url_for('catering.delete_booking', booking_id=booking.id) }}"
+                                   class="btn btn-danger btn-sm delete-btn"
+                                   onclick="return confirm('Are you sure you want to delete this booking?');">
+                                    Delete
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Booking Modal -->
+    <div class="modal fade" id="addBookingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="addBookingForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Booking</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Customer Name</label>
+                            <input type="text" name="requestor_name" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Customer Address</label>
+                            <input type="text" name="customer_address" class="form-control" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Contact Number</label>
+                                <input type="text" name="contact_number" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Email Address</label>
+                                <input type="email" name="email_address" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Event Date</label>
+                                <input type="date" name="event_date" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Event Time</label>
+                                <input type="time" name="event_time" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Items Requested</label>
+                            
+                            <!-- Dropdowns for selecting items -->
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <select id="addMenuSelect" class="form-select form-select-sm">
+                                        <option value="">Select Menu Item</option>
+                                        {% for item in menu_items %}
+                                        <option value="{{ item.id }}" data-description="{{ item.description }}" data-price="{{ item.price }}">{{ item.description }} - ₱{{ "{:,.2f}".format(item.price) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="addEquipmentSelect" class="form-select form-select-sm">
+                                        <option value="">Select Equipment</option>
+                                        {% for item in equipment_items %}
+                                        <option value="{{ item.id }}" data-description="{{ item.description }}" data-price="{{ item.rent_price }}" data-type="equipment">{{ item.description }} - ₱{{ "{:,.2f}".format(item.rent_price) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Items List -->
+                            <div id="addItemsList" class="border rounded p-2 mb-2" style="min-height: 100px; max-height: 300px; overflow-y: auto;">
+                                <p class="text-muted text-center mb-0" id="addItemsEmpty">No items selected. Select items from the dropdowns above.</p>
+                            </div>
+                            
+                            <!-- Total Amount -->
+                            <div class="d-flex justify-content-end">
+                                <div class="fw-bold">
+                                    <span>Total Amount: </span>
+                                    <span id="addTotalAmount">₱0.00</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden input to store formatted items -->
+                            <input type="hidden" name="items_requested" id="addItemsRequested" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Status</label>
+                            <select name="status" class="form-select" required>
+                                <option value="Pending">Pending</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning btn-sm">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Booking Modal -->
+    <div class="modal fade" id="editBookingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" id="editBookingForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Booking</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Customer Name</label>
+                            <input type="text" name="requestor_name" class="form-control" id="editName" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Customer Address</label>
+                            <input type="text" name="customer_address" class="form-control" id="editAddress" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Contact Number</label>
+                                <input type="text" name="contact_number" class="form-control" id="editContact" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Email Address</label>
+                                <input type="email" name="email_address" class="form-control" id="editEmail">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Event Date</label>
+                                <input type="date" name="event_date" class="form-control" id="editDate" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Event Time</label>
+                                <input type="time" name="event_time" class="form-control" id="editTime" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Items Requested</label>
+                            
+                            <!-- Dropdowns for selecting items -->
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <select id="editMenuSelect" class="form-select form-select-sm">
+                                        <option value="">Select Menu Item</option>
+                                        {% for item in menu_items %}
+                                        <option value="{{ item.id }}" data-description="{{ item.description }}" data-price="{{ item.price }}">{{ item.description }} - ₱{{ "{:,.2f}".format(item.price) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="editEquipmentSelect" class="form-select form-select-sm">
+                                        <option value="">Select Equipment</option>
+                                        {% for item in equipment_items %}
+                                        <option value="{{ item.id }}" data-description="{{ item.description }}" data-price="{{ item.rent_price }}" data-type="equipment">{{ item.description }} - ₱{{ "{:,.2f}".format(item.rent_price) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Items List -->
+                            <div id="editItemsList" class="border rounded p-2 mb-2" style="min-height: 100px; max-height: 300px; overflow-y: auto;">
+                                <p class="text-muted text-center mb-0" id="editItemsEmpty">No items selected. Select items from the dropdowns above.</p>
+                            </div>
+                            
+                            <!-- Total Amount -->
+                            <div class="d-flex justify-content-end">
+                                <div class="fw-bold">
+                                    <span>Total Amount: </span>
+                                    <span id="editTotalAmount">₱0.00</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden input to store formatted items -->
+                            <input type="hidden" name="items_requested" id="editItemsRequested" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Status</label>
+                            <select name="status" class="form-select" id="editStatus" required>
+                                <option value="Pending">Pending</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning btn-sm">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+    // ===================== Bookings Table & Modals =====================
+    const bookingsTable = document.querySelector('#bookingsTable tbody');
+
+    const addForm = document.getElementById('addBookingForm');
+    const editForm = document.getElementById('editBookingForm');
+    const editName = document.getElementById('editName');
+    const editAddress = document.getElementById('editAddress');
+    const editContact = document.getElementById('editContact');
+    const editEmail = document.getElementById('editEmail');
+    const editDate = document.getElementById('editDate');
+    const editTime = document.getElementById('editTime');
+    const editStatus = document.getElementById('editStatus');
+    
+    // Items management for Add Modal
+    const addMenuSelect = document.getElementById('addMenuSelect');
+    const addEquipmentSelect = document.getElementById('addEquipmentSelect');
+    const addItemsList = document.getElementById('addItemsList');
+    const addItemsEmpty = document.getElementById('addItemsEmpty');
+    const addTotalAmount = document.getElementById('addTotalAmount');
+    const addItemsRequested = document.getElementById('addItemsRequested');
+    let addItems = []; // Array to store selected items
+    
+    // Items management for Edit Modal
+    const editMenuSelect = document.getElementById('editMenuSelect');
+    const editEquipmentSelect = document.getElementById('editEquipmentSelect');
+    const editItemsList = document.getElementById('editItemsList');
+    const editItemsEmpty = document.getElementById('editItemsEmpty');
+    const editTotalAmount = document.getElementById('editTotalAmount');
+    const editItemsRequested = document.getElementById('editItemsRequested');
+    let editItems = []; // Array to store selected items
+    
+    // Declare functions that will be used in inline handlers
+    function updateQuantity(index, quantity, itemsArrayName, prefix) {
+        const itemsArray = itemsArrayName === 'addItems' ? addItems : editItems;
+        if (quantity <= 0) {
+            removeItem(index, itemsArrayName, prefix);
+            return;
+        }
+        itemsArray[index].quantity = parseInt(quantity) || 1;
+        renderItemsList(prefix);
+        updateTotal(prefix);
+    }
+    
+    function removeItem(index, itemsArrayName, prefix) {
+        const itemsArray = itemsArrayName === 'addItems' ? addItems : editItems;
+        itemsArray.splice(index, 1);
+        renderItemsList(prefix);
+        updateTotal(prefix);
+    }
+    
+    // Make functions global for inline event handlers
+    window.updateQuantity = updateQuantity;
+    window.removeItem = removeItem;
+
+    // ---------- Add Booking ----------
+    addForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const formData = new FormData(addForm);
+
+        fetch('{{ url_for("catering.add_booking") }}', {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                addOrUpdateRow(data.booking);
+                addForm.reset();
+                addItems = [];
+                renderItemsList('add');
+                updateTotal('add');
+                bootstrap.Modal.getInstance(document.getElementById('addBookingModal')).hide();
+                location.reload(); // Reload to show new booking
+            } else alert(data.error || 'Failed to add booking.');
+        });
+    });
+
+    // ---------- Edit Booking ----------
+    bookingsTable.parentElement.addEventListener('click', e => {
+        if(e.target.classList.contains('edit-btn')){
+            const btn = e.target;
+            editForm.action = `/catering/edit-booking/${btn.dataset.id}`;
+            editName.value = btn.dataset.name || '';
+            editAddress.value = btn.dataset.address || '';
+            editContact.value = btn.dataset.contact || '';
+            editEmail.value = btn.dataset.email || '';
+            editDate.value = btn.dataset.date || '';
+            editTime.value = btn.dataset.time || '';
+            editStatus.value = btn.dataset.status || 'Pending';
+            // Parse existing items
+            parseItemsString(btn.dataset.items || '', 'edit');
+            new bootstrap.Modal(document.getElementById('editBookingModal')).show();
+        }
+    });
+
+    editForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const formData = new FormData(editForm);
+
+        fetch(editForm.action, {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                bootstrap.Modal.getInstance(document.getElementById('editBookingModal')).hide();
+                location.reload(); // Reload to show updated booking
+            } else alert(data.error || 'Failed to update booking.');
+        });
+    });
+
+    // ===================== Items Management Functions =====================
+    
+    // Add item from dropdown
+    function addItemFromDropdown(selectElement, itemsArray, listElement, emptyElement, prefix) {
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        if (!selectedOption.value) return;
+        
+        const itemId = selectedOption.value;
+        const description = selectedOption.dataset.description;
+        const price = parseFloat(selectedOption.dataset.price);
+        const type = selectedOption.dataset.type || 'menu';
+        
+        // Check if item already exists
+        const existingIndex = itemsArray.findIndex(item => item.id === itemId && item.type === type);
+        if (existingIndex >= 0) {
+            // Increment quantity if exists
+            itemsArray[existingIndex].quantity += 1;
+        } else {
+            // Add new item
+            itemsArray.push({
+                id: itemId,
+                description: description,
+                price: price,
+                quantity: 1,
+                type: type
+            });
+        }
+        
+        // Reset dropdown
+        selectElement.value = '';
+        
+        // Render list and update total
+        renderItemsList(prefix);
+        updateTotal(prefix);
+    }
+    
+    
+    // Render items list
+    function renderItemsList(prefix) {
+        const itemsArray = prefix === 'add' ? addItems : editItems;
+        const listElement = prefix === 'add' ? addItemsList : editItemsList;
+        const emptyElement = prefix === 'add' ? addItemsEmpty : editItemsEmpty;
+        
+        if (itemsArray.length === 0) {
+            listElement.innerHTML = `<p class="text-muted text-center mb-0" id="${prefix}ItemsEmpty">No items selected. Select items from the dropdowns above.</p>`;
+            return;
+        }
+        
+        emptyElement.style.display = 'none';
+        let html = '<div class="table-responsive"><table class="table table-sm table-bordered mb-0">';
+        html += '<thead><tr><th>Item</th><th style="width: 100px;">Quantity</th><th style="width: 120px;">Price</th><th style="width: 120px;">Total</th><th style="width: 60px;">Action</th></tr></thead><tbody>';
+        
+        itemsArray.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            html += `
+                <tr>
+                    <td>${item.description} ${item.type === 'equipment' ? '(Equipment)' : ''}</td>
+                    <td>
+                        <input type="number" min="1" value="${item.quantity}" 
+                               class="form-control form-control-sm" 
+                               onchange="updateQuantity(${index}, this.value, '${prefix === 'add' ? 'addItems' : 'editItems'}', '${prefix}')">
+                    </td>
+                    <td>₱${item.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="fw-bold">₱${itemTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(${index}, '${prefix === 'add' ? 'addItems' : 'editItems'}', '${prefix}')">×</button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        listElement.innerHTML = html;
+        
+        // Update hidden input
+        formatItemsRequested(prefix);
+    }
+    
+    // Update total amount
+    function updateTotal(prefix) {
+        const itemsArray = prefix === 'add' ? addItems : editItems;
+        const totalElement = prefix === 'add' ? addTotalAmount : editTotalAmount;
+        
+        const total = itemsArray.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        totalElement.textContent = `₱${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        formatItemsRequested(prefix);
+    }
+    
+    // Format items_requested for submission
+    function formatItemsRequested(prefix) {
+        const itemsArray = prefix === 'add' ? addItems : editItems;
+        const hiddenInput = prefix === 'add' ? addItemsRequested : editItemsRequested;
+        
+        if (itemsArray.length === 0) {
+            hiddenInput.value = '';
+            return;
+        }
+        
+        const lines = itemsArray.map((item, index) => {
+            const total = item.price * item.quantity;
+            const lineNumber = index + 1;
+            return `${lineNumber}. ${item.description}${item.type === 'equipment' ? ' (Equipment)' : ''} - Qty: ${item.quantity} x ₱${item.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} = ₱${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        });
+        
+        const grandTotal = itemsArray.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        lines.push(`\nTOTAL AMOUNT: ₱${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
+        
+        hiddenInput.value = lines.join('\n');
+    }
+    
+    // Parse items string when editing
+    function parseItemsString(itemsString, prefix) {
+        const itemsArray = prefix === 'add' ? addItems : editItems;
+        itemsArray.length = 0; // Clear array
+        
+        if (!itemsString || itemsString.trim() === '') {
+            renderItemsList(prefix);
+            updateTotal(prefix);
+            return;
+        }
+        
+        // Try to parse the items string
+        // Format: "1. Item Description - Qty: X x ₱Y.YY = ₱Z.ZZ" or "Item Description - Qty: X x ₱Y.YY = ₱Z.ZZ"
+        const lines = itemsString.split('\n').filter(line => line.trim() && !line.includes('TOTAL AMOUNT'));
+        
+        lines.forEach(line => {
+            // Match with or without line number prefix (e.g., "1. " or just the item)
+            const match = line.match(/^\d+\.\s*(.+?)\s*-\s*Qty:\s*(\d+)\s*x\s*₱([\d,]+\.?\d*)\s*=\s*₱([\d,]+\.?\d*)$/) ||
+                          line.match(/^(.+?)\s*-\s*Qty:\s*(\d+)\s*x\s*₱([\d,]+\.?\d*)\s*=\s*₱([\d,]+\.?\d*)$/);
+            if (match) {
+                // If first match (with number), description is at index 1, otherwise index 0
+                const description = match[1].replace(/\s*\(Equipment\)\s*$/, '').trim();
+                const quantity = parseInt(match[2]);
+                const price = parseFloat(match[3].replace(/,/g, ''));
+                const isEquipment = match[1].includes('(Equipment)');
+                
+                itemsArray.push({
+                    id: `parsed_${itemsArray.length}`, // Temporary ID for parsed items
+                    description: description,
+                    price: price,
+                    quantity: quantity,
+                    type: isEquipment ? 'equipment' : 'menu'
+                });
+            }
+        });
+        
+        renderItemsList(prefix);
+        updateTotal(prefix);
+    }
+    
+    // Event listeners for dropdowns
+    addMenuSelect.addEventListener('change', () => {
+        addItemFromDropdown(addMenuSelect, addItems, addItemsList, addItemsEmpty, 'add');
+    });
+    
+    addEquipmentSelect.addEventListener('change', () => {
+        addItemFromDropdown(addEquipmentSelect, addItems, addItemsList, addItemsEmpty, 'add');
+    });
+    
+    editMenuSelect.addEventListener('change', () => {
+        addItemFromDropdown(editMenuSelect, editItems, editItemsList, editItemsEmpty, 'edit');
+    });
+    
+    editEquipmentSelect.addEventListener('change', () => {
+        addItemFromDropdown(editEquipmentSelect, editItems, editItemsList, editItemsEmpty, 'edit');
+    });
+    
+    // Reset items when modal is closed
+    document.getElementById('addBookingModal').addEventListener('hidden.bs.modal', () => {
+        addItems = [];
+        renderItemsList('add');
+        updateTotal('add');
+    });
+    
+    // ===================== Bookings Table Functions =====================
+    
+    // ---------- Add/Update Table Row ----------
+    function addOrUpdateRow(booking){
+        let row = document.getElementById(`bookingRow${booking.id}`);
+        if(!row){
+            row = document.createElement('tr');
+            row.id = `bookingRow${booking.id}`;
+            bookingsTable.appendChild(row);
+        }
+        
+        const eventDate = booking.event_date ? new Date(booking.event_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : '';
+        const eventTime = booking.event_time ? new Date(`2000-01-01T${booking.event_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true}) : '';
+        const itemsPreview = booking.items_requested || '';
+        
+        const statusClass = booking.status === 'Confirmed' ? 'bg-success' 
+            : booking.status === 'Pending' ? 'bg-warning'
+            : booking.status === 'Cancelled' ? 'bg-danger'
+            : 'bg-secondary';
+        
+        const customerCell = `
+            <div class="fw-bold">${booking.requestor_name || ''}</div>
+            ${booking.customer_address ? `<div class="text-muted" style="font-size: 0.85rem;">${booking.customer_address}</div>` : ''}
+            ${booking.contact_number ? `<div class="text-muted" style="font-size: 0.85rem;">${booking.contact_number}</div>` : ''}
+        `;
+        
+        row.innerHTML = `
+            <td>${booking.id}</td>
+            <td>${customerCell}</td>
+            <td>${eventDate}</td>
+            <td>${eventTime}</td>
+            <td style="white-space: pre-line; font-size: 0.9rem;">${itemsPreview}</td>
+            <td><span class="badge ${statusClass}">${booking.status || 'Pending'}</span></td>
+            <td>
+                <button class="btn btn-warning btn-sm edit-btn"
+                        data-id="${booking.id}"
+                        data-name="${booking.requestor_name || ''}"
+                        data-address="${booking.customer_address || ''}"
+                        data-contact="${booking.contact_number || ''}"
+                        data-email="${booking.email_address || ''}"
+                        data-date="${booking.event_date || ''}"
+                        data-time="${booking.event_time || ''}"
+                        data-items="${booking.items_requested || ''}"
+                        data-status="${booking.status || 'Pending'}">
+                    Edit
+                </button>
+                <a href="/catering/delete-booking/${booking.id}" class="btn btn-danger btn-sm delete-btn" onclick="return confirm('Are you sure?');">Delete</a>
+            </td>
+        `;
+    }
+</script>
+
+</body>
+</html>

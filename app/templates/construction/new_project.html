@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Project</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-4">
+    <h2 class="mb-4">Create New Project</h2>
+
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Contractor Name</label>
+                <input name="contractor_name" class="form-control" required>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Contractor Address</label>
+                <input name="contractor_address" class="form-control">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Project Name</label>
+                <input name="project_name" class="form-control" required>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Project Site</label>
+                <input name="project_site" class="form-control">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>NTP Date</label>
+                <input type="date" name="ntp_date" class="form-control">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Completion Date</label>
+                <input type="date" name="completion_date" class="form-control">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Contract Duration (No. of Days)</label>
+                <input name="contract_duration" class="form-control">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label>Contract Price</label>
+                <input type="number" step="0.01" name="contract_price" class="form-control">
+            </div>
+        </div>
+
+        <button class="btn btn-primary">Save Project</button>
+        <a href="{{ url_for('construction.construction_home') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+</body>
+</html>

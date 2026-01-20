@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header text-center">
+                    <h4>Login</h4>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- Flash messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, msg in messages %}
+                                <div class="alert alert-{{ category }}">{{ msg }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                        {% endif %}
+
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label>Username</label>
+                            <input id="usernameField" name="username" class="form-control" required>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label>Password</label>
+                            <input name="password" type="password" class="form-control" required>
+                        </div>
+
+                        <!-- Buttons: Login + Cancel -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">Login</button>
+                            <button type="button" class="btn btn-secondary flex-grow-1" onclick="window.history.back();">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Highlight username on load -->
+<script>
+    window.onload = function() {
+        const userField = document.getElementById("usernameField");
+        if (userField) {
+            userField.focus();
+            userField.select();
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,127 @@
+{% extends "construction/home.html" %}
+
+{% block content %}
+<!-- Title Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">Overview</h3>
+    </div>
+</div>
+
+{% block reports_content %}
+<!-- Search and Results Card -->
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Search Construction Projects</h5>
+    </div>
+    <div class="card-body">
+        <!-- Search Bar -->
+        <div class="mb-3">
+            <input type="text" 
+                   class="form-control form-control-lg" 
+                   id="projectSearch" 
+                   placeholder="Search by project name, site, contractor, or status...">
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Project Site</th>
+                        <th>Contractor</th>
+                        <th>Status</th>
+                        <th>NTP Date</th>
+                        <th>Completion Date</th>
+                        <th>Duration (days)</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="projectTableBody">
+                    {% for project in projects %}
+                    <tr class="project-row" 
+                        data-project-name="{{ project.project_name|lower }}"
+                        data-project-site="{{ project.project_site|lower if project.project_site else '' }}"
+                        data-contractor-name="{{ project.contractor_name|lower if project.contractor_name else '' }}"
+                        data-status="{{ project.status|lower if project.status else '' }}"
+                        onclick="window.location.href='{{ url_for('construction.project_overview', project_id=project.id) }}'">
+                        <td>{{ project.project_name }}</td>
+                        <td>{{ project.project_site }}</td>
+                        <td>{{ project.contractor_name }}</td>
+                        <td>{{ project.status }}</td>
+                        <td>{{ project.ntp_date.strftime('%d %b %Y') if project.ntp_date else '' }}</td>
+                        <td>{{ project.completion_date.strftime('%d %b %Y') if project.completion_date else '' }}</td>
+                        <td>{{ project.contract_duration }}</td>
+                        <td>{{ "{:,.2f}".format(project.contract_price) if project.contract_price else '' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr id="noResultsRow" style="display: none;">
+                        <td colspan="8" class="text-center">No projects found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+{% block reports_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('projectSearch');
+        const tableBody = document.getElementById('projectTableBody');
+        const rows = tableBody.querySelectorAll('tr.project-row');
+        const noResultsRow = document.getElementById('noResultsRow');
+        
+        // Show no results row if no projects exist
+        if (rows.length === 0 && noResultsRow) {
+            noResultsRow.style.display = '';
+        }
+
+        function filterProjects() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            rows.forEach(function(row) {
+                const projectName = row.getAttribute('data-project-name') || '';
+                const projectSite = row.getAttribute('data-project-site') || '';
+                const contractorName = row.getAttribute('data-contractor-name') || '';
+                const status = row.getAttribute('data-status') || '';
+
+                const matches = projectName.includes(searchTerm) ||
+                               projectSite.includes(searchTerm) ||
+                               contractorName.includes(searchTerm) ||
+                               status.includes(searchTerm);
+
+                if (matches) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Show/hide no results message
+            if (noResultsRow) {
+                if (visibleCount === 0 && searchTerm !== '') {
+                    noResultsRow.style.display = '';
+                } else {
+                    noResultsRow.style.display = 'none';
+                }
+            }
+        }
+
+        // Add event listener for search input
+        if (searchInput) {
+            searchInput.addEventListener('input', filterProjects);
+            searchInput.addEventListener('keyup', filterProjects);
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

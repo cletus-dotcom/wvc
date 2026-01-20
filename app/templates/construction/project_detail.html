@@ -1,0 +1,2344 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.project_name }}</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+<div class="container">
+
+    <!-- Title row -->
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <h2>{{ project.project_name }}</h2>
+        <a href="{{ url_for('construction.construction_home') }}" class="btn btn-secondary">
+            ⬅ Back to Home
+        </a>
+    </div>
+
+    <!-- Project details row -->
+    <div class="d-flex gap-4 mb-2">
+        <div><strong>Project Site:</strong> {{ project.project_site }}</div>
+        <div><strong>Contractor:</strong> {{ project.contractor_name }}</div>
+        <div><strong>Status:</strong> {{ project.status }}</div>
+    </div>
+
+    <div class="border-bottom mt-2 mb-3"></div>
+
+    <!-- Activities Table -->
+    {% if session.get('department', '').lower() == 'corporate' %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0 text-white">Project Activities</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-striped mb-0" id="activitiesDisplayTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 50%;">Activity Description</th>
+                            <th style="width: 25%;">Activity Date & Time</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 10%;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activitiesDisplayTableBody">
+                        <tr>
+                            <td colspan="4" class="text-center">Loading activities...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Edit Activity Modal -->
+    <div class="modal fade" id="editActivityModal" tabindex="-1" aria-labelledby="editActivityModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editActivityModalLabel">Edit Activity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editActivityForm">
+                        <input type="hidden" id="editActivityId">
+                        <div class="mb-3">
+                            <label for="editActivityDescription" class="form-label">Activity Description</label>
+                            <input type="text" class="form-control" id="editActivityDescription" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editActivityDateTime" class="form-label">Activity Date & Time</label>
+                            <input type="datetime-local" class="form-control" id="editActivityDateTime" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editActivityStatus" class="form-label">Status</label>
+                            <select class="form-control" id="editActivityStatus" required>
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="On Hold">On Hold</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveActivityBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="border-bottom mt-2 mb-3"></div>
+    
+    <!-- Type of Entry dropdown -->
+    {% if session.get('role') in ['Staff', 'Admin'] or session.get('department', '').lower() in ['construction', 'corporate'] %}
+    <div class="d-flex align-items-center mb-3">
+        <span class="fw-bold me-2">Type of Entry:</span>
+        <select id="entryType" class="form-select" style="width: 280px;">
+            <option value="" selected disabled>Select Type</option>
+            <option value="Materials">Materials</option>
+            <option value="Labor">Labor</option>
+            <option value="Gasoline">Gasoline</option>
+            <option value="Documents">Documents</option>
+            {% if session.get('role') == 'Admin' %}
+            <option value="Obligation">Obligation</option>
+            <option value="Activity">Activity</option>
+            {% endif %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div class="border-bottom mb-2"></div>
+
+<!-- Hidden Materials Entry Card -->
+{% if session.get('role') in ['Staff', 'Admin'] or session.get('department', '').lower() in ['construction', 'corporate'] %}
+<div id="materialsCard" class="card shadow-sm p-3 mb-3" style="display: none;">
+    <h5 class="card-title">Materials Entry Form</h5>
+
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <label for="materialDate" class="form-label me-2 mb-0">Date:</label>
+            <input type="date" class="form-control w-auto" id="materialDate" name="material_date">
+        </div>
+
+        <div id="invoiceDisplay" class="fw-bold text-success mb-0"></div>
+
+        <div class="fw-bold mb-0" id="materialsTotalAmountDisplay">Total Amount: 0.00</div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="submitMaterialsBtn" class="btn btn-primary">Submit</button>
+            <button id="cancelMaterialsBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <p class="card-text">Add material details below:</p>
+
+    <table class="table table-sm table-bordered" id="materialsTable">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 35%;">Item</th>
+                <th style="width: 10%;">Qty</th>
+                <th style="width: 15%;">Unit</th>
+                <th style="width: 15%;">Unit Price</th>
+                <th style="width: 15%;">Total Amount</th>
+                <th style="width: 10%;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="position-relative">
+                        <input type="text" class="form-control item-input">
+                    </div>
+                </td>
+                <td><input type="number" class="form-control qty-input" min="0" step="0.001"></td>
+                <td>
+                    <div class="position-relative">
+                        <input type="text" class="form-control unit-input">
+                    </div>
+                </td>
+                <td><input type="number" class="form-control unit-price-input" min="0" step="0.01"></td>
+                <td><input type="text" class="form-control total-amount-input" readonly></td>
+                <td><button type="button" class="btn btn-sm btn-danger delete-row-btn">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+{% endif %}
+
+<!-- Hidden Gasoline Entry Card -->
+{% if session.get('role') in ['Staff', 'Admin'] or session.get('department', '').lower() in ['construction', 'corporate'] %}
+<div id="gasolineCard" class="card shadow-sm p-3 mb-3" style="display: none;">
+
+    <h5 class="card-title">Gasoline Entry Form</h5>
+
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <label for="gasolineDate" class="form-label me-2 mb-0">Date:</label>
+            <input type="date" class="form-control w-auto" id="gasolineDate" name="gasoline_date">
+        </div>
+
+        <div id="gasolineInvoiceDisplay" class="fw-bold text-success mb-0"></div>
+
+        <div class="fw-bold mb-0" id="gasolineTotalAmountDisplay">Total Amount: 0.00</div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="submitGasolineBtn" class="btn btn-primary">Submit</button>
+            <button id="cancelGasolineBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <table class="table table-sm table-bordered" id="gasolineTable">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 80%;">Amount</th>
+                <th style="width: 10%;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="number" class="form-control gasoline-amount-input" min="0" step="0.01"></td>
+                <td><button type="button" class="btn btn-sm btn-danger del-gasoline-row">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+{% endif %}
+
+<!-- Hidden Labor Entry Card -->
+{% if session.get('role') in ['Staff', 'Admin'] or session.get('department', '').lower() in ['construction', 'corporate'] %}
+<div id="laborCard" class="card shadow-sm p-3 mb-3" style="display: none;">
+
+    <h5 class="card-title">Labor Entry Form</h5>
+
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <label for="laborDate" class="form-label me-2 mb-0">Date:</label>
+            <input type="date" class="form-control w-auto" id="laborDate" name="labor_date">
+        </div>
+
+        <div id="laborInvoiceDisplay" class="fw-bold text-success mb-0"></div>
+
+        <div class="fw-bold mb-0" id="laborTotalAmountDisplay">Total Amount: 0.00</div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="submitLaborBtn" class="btn btn-primary">Submit</button>
+            <button id="cancelLaborBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <table class="table table-sm table-bordered" id="laborTable">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 35%;">Employee</th>
+                <th style="width: 15%;">Rate per Day</th>
+                <th style="width: 15%;">No. of Days</th>
+                <th style="width: 15%;">Total Amount</th>
+                <th style="width: 10%;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="position-relative">
+                        <input type="text" class="form-control employee-input">
+                    </div>
+                </td>
+                <td><input class="form-control rate-input" readonly></td>
+                <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                <td><input class="form-control row-total" readonly></td>
+                <td><button type="button" class="btn btn-sm btn-danger del-labor-row">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+{% endif %}
+
+<!-- Hidden Documents Entry Card -->
+{% if session.get('role') in ['Staff', 'Admin'] or session.get('department', '').lower() in ['construction', 'corporate'] %}
+<div id="documentsCard" class="card shadow-sm p-3 mb-3" style="display: none;">
+
+    <h5 class="card-title">Documents Entry Form</h5>
+
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <label for="documentsDate" class="form-label me-2 mb-0">Date:</label>
+            <input type="date" class="form-control w-auto" id="documentsDate" name="documents_date">
+        </div>
+
+        <div id="documentsInvoiceDisplay" class="fw-bold text-success mb-0"></div>
+
+        <div class="fw-bold mb-0" id="documentsTotalAmountDisplay">Total Amount: 0.00</div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="submitDocumentsBtn" class="btn btn-primary">Submit</button>
+            <button id="cancelDocumentsBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <table class="table table-sm table-bordered" id="documentsTable">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 60%;">Document Description</th>
+                <th style="width: 30%;">Amount</th>
+                <th style="width: 10%;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="text" class="form-control document-ref-input"></td>
+                <td><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
+                <td><button type="button" class="btn btn-sm btn-danger del-document-row">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+{% endif %}
+
+<!-- Hidden Obligation Entry Card -->
+{% if session.get('role') == 'Admin' %}
+<div id="obligationCard" class="card shadow-sm p-3 mb-3" style="display: none;">
+
+    <h5 class="card-title">Obligation Entry Form</h5>
+
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <label for="obligationDate" class="form-label me-2 mb-0">Date:</label>
+            <input type="date" class="form-control w-auto" id="obligationDate" name="obligation_date">
+        </div>
+
+        <div id="obligationInvoiceDisplay" class="fw-bold text-success mb-0"></div>
+
+        <div class="fw-bold mb-0" id="obligationTotalAmountDisplay">Total Amount: 0.00</div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="submitObligationBtn" class="btn btn-primary">Submit</button>
+            <button id="cancelObligationBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <table class="table table-sm table-bordered" id="obligationTable">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 60%;">Obligation Description</th>
+                <th style="width: 30%;">Amount</th>
+                <th style="width: 10%;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="text" class="form-control obligation-ref-input"></td>
+                <td><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
+                <td><button type="button" class="btn btn-sm btn-danger del-obligation-row">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+{% endif %}
+
+<!-- Hidden Activity Entry Card -->
+{% if session.get('role') == 'Admin' %}
+<div id="activityCard" class="card shadow-sm p-3 mb-3" style="display: none;">
+
+    <h5 class="card-title">Activity Entry Form</h5>
+
+    <div class="mb-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <label for="activityDate" class="form-label me-2 mb-0">Date:</label>
+            <input type="date" class="form-control w-auto" id="activityDate" name="activity_date">
+        </div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="submitActivityBtn" class="btn btn-primary">Submit</button>
+            <button id="cancelActivityBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <table class="table table-sm table-bordered" id="activityTable">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 50%;">Activity Description</th>
+                <th style="width: 20%;">Activity Date & Time</th>
+                <th style="width: 20%;">Status</th>
+                <th style="width: 10%;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="text" class="form-control activity-input"></td>
+                <td><input type="datetime-local" class="form-control activity-date-input"></td>
+                <td>
+                    <select class="form-control activity-status-input">
+                        <option value="Pending" selected>Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="On Hold">On Hold</option>
+                    </select>
+                </td>
+                <td><button type="button" class="btn btn-sm btn-danger del-activity-row">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+{% endif %}
+
+
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+
+    /* ==========================================
+       GLOBALS
+    ========================================== */
+    const entryType = document.getElementById("entryType");
+    const materialsCard = document.getElementById("materialsCard");
+    const materialDate = document.getElementById("materialDate");
+    const materialsTableBody = document.querySelector("#materialsTable tbody");
+    const invoiceDisplay = document.getElementById("invoiceDisplay");
+    const materialsTotalAmountDisplay = document.getElementById("materialsTotalAmountDisplay");
+    const submitMaterialsBtn = document.getElementById("submitMaterialsBtn");
+    const cancelMaterialsBtn = document.getElementById("cancelMaterialsBtn");
+    const laborCard = document.getElementById("laborCard");
+    const laborTable = document.getElementById("laborTable");
+    const laborTotalAmountDisplay = document.getElementById("laborTotalAmountDisplay");
+    const laborDate = document.getElementById("laborDate");
+    const laborInvoiceDisplay = document.getElementById("laborInvoiceDisplay");
+    const submitLaborBtn = document.getElementById("submitLaborBtn");
+    const cancelLaborBtn = document.getElementById("cancelLaborBtn");
+    const gasolineCard = document.getElementById("gasolineCard");
+    const gasolineTable = document.getElementById("gasolineTable");
+    const gasolineDate = document.getElementById("gasolineDate");
+    const gasolineInvoiceDisplay = document.getElementById("gasolineInvoiceDisplay");
+    const gasolineTotalAmountDisplay = document.getElementById("gasolineTotalAmountDisplay");
+    const submitGasolineBtn = document.getElementById("submitGasolineBtn");
+    const cancelGasolineBtn = document.getElementById("cancelGasolineBtn");
+    const documentsCard = document.getElementById("documentsCard");
+    const documentsTable = document.getElementById("documentsTable");
+    const documentsDate = document.getElementById("documentsDate");
+    const documentsInvoiceDisplay = document.getElementById("documentsInvoiceDisplay");
+    const documentsTotalAmountDisplay = document.getElementById("documentsTotalAmountDisplay");
+    const submitDocumentsBtn = document.getElementById("submitDocumentsBtn");
+    const cancelDocumentsBtn = document.getElementById("cancelDocumentsBtn");
+    const obligationCard = document.getElementById("obligationCard");
+    const obligationTable = document.getElementById("obligationTable");
+    const obligationDate = document.getElementById("obligationDate");
+    const obligationInvoiceDisplay = document.getElementById("obligationInvoiceDisplay");
+    const obligationTotalAmountDisplay = document.getElementById("obligationTotalAmountDisplay");
+    const submitObligationBtn = document.getElementById("submitObligationBtn");
+    const cancelObligationBtn = document.getElementById("cancelObligationBtn");
+    const activityCard = document.getElementById("activityCard");
+    const activityTable = document.getElementById("activityTable");
+    const activityDate = document.getElementById("activityDate");
+    const submitActivityBtn = document.getElementById("submitActivityBtn");
+    const cancelActivityBtn = document.getElementById("cancelActivityBtn");
+
+    let itemsList = [];
+    let unitsList = [];
+    const activitiesDisplayTableBody = document.getElementById("activitiesDisplayTableBody");
+
+    /* ==========================================
+       LOAD ACTIVITIES
+    ========================================== */
+    async function loadActivities() {
+        // Only load activities if the table exists (Corporate users only)
+        if (!activitiesDisplayTableBody) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`{{ url_for('construction.get_activities', project_id=project.id) }}`);
+            const data = await response.json();
+            
+            if (data.activities && data.activities.length > 0) {
+                activitiesDisplayTableBody.innerHTML = "";
+                data.activities.forEach((activity) => {
+                    const row = activitiesDisplayTableBody.insertRow();
+                    const formattedDate = formatActivityDateTime(activity.activity_date, activity.activity_time);
+                    row.style.cursor = "pointer";
+                    row.setAttribute("data-activity-id", activity.id);
+                    row.addEventListener("click", function(e) {
+                        // Don't open modal if clicking on delete button
+                        if (e.target.tagName === "BUTTON" || e.target.closest("button")) {
+                            return;
+                        }
+                        openEditActivityModal(activity);
+                    });
+                    row.innerHTML = `
+                        <td>${activity.activity || ""}</td>
+                        <td>${formattedDate}</td>
+                        <td>
+                            <span class="badge ${getStatusBadgeClass(activity.activity_status)}">${activity.activity_status || "Pending"}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteActivity(${activity.id})">Delete</button>
+                        </td>
+                    `;
+                });
+            } else {
+                activitiesDisplayTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center">No activities found.</td>
+                    </tr>
+                `;
+            }
+        } catch (error) {
+            console.error("Error loading activities:", error);
+            if (activitiesDisplayTableBody) {
+                activitiesDisplayTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-danger">Error loading activities.</td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    /* ==========================================
+       EDIT ACTIVITY MODAL
+    ========================================== */
+    function openEditActivityModal(activity) {
+        document.getElementById("editActivityId").value = activity.id;
+        document.getElementById("editActivityDescription").value = activity.activity || "";
+        
+        // Format datetime for datetime-local input (YYYY-MM-DDTHH:mm)
+        let datetimeValue = "";
+        if (activity.activity_date) {
+            datetimeValue = activity.activity_date;
+            if (activity.activity_time) {
+                datetimeValue += "T" + activity.activity_time;
+            } else if (datetimeValue.includes("T")) {
+                // Already has time
+            } else {
+                datetimeValue += "T00:00";
+            }
+        }
+        document.getElementById("editActivityDateTime").value = datetimeValue;
+        document.getElementById("editActivityStatus").value = activity.activity_status || "Pending";
+        
+        // Show modal using Bootstrap
+        const modal = new bootstrap.Modal(document.getElementById("editActivityModal"));
+        modal.show();
+    }
+
+    // Save activity changes
+    const saveActivityBtn = document.getElementById("saveActivityBtn");
+    if (saveActivityBtn) {
+        saveActivityBtn.addEventListener("click", async function() {
+        const activityId = document.getElementById("editActivityId").value;
+        const description = document.getElementById("editActivityDescription").value.trim();
+        const datetime = document.getElementById("editActivityDateTime").value;
+        const status = document.getElementById("editActivityStatus").value;
+
+        if (!description || !datetime) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        const saveBtn = document.getElementById("saveActivityBtn");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.update_activity', project_id=project.id, activity_id=0) }}`.replace('/0', `/${activityId}`), {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    activity: description,
+                    activity_date: datetime,
+                    activity_status: status
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message || "Activity updated successfully!");
+                const modal = bootstrap.Modal.getInstance(document.getElementById("editActivityModal"));
+                modal.hide();
+                await loadActivities();
+            } else {
+                alert(data.message || "Error updating activity.");
+            }
+        } catch (error) {
+            console.error("Error updating activity:", error);
+            alert("Error updating activity. Please try again.");
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save Changes";
+        }
+        });
+    }
+
+    function formatActivityDateTime(dateStr, timeStr) {
+        if (!dateStr) return "";
+        
+        try {
+            // Parse the date string (YYYY-MM-DD format)
+            const date = new Date(dateStr + "T00:00:00");
+            
+            if (isNaN(date.getTime())) return dateStr; // Invalid date, return original
+            
+            // Format as "18 Dec 2025"
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            
+            let formatted = `${day} ${month} ${year}`;
+            
+            // Add time if available, convert to 12-hour format
+            if (timeStr) {
+                const time12Hour = convertTo12Hour(timeStr);
+                formatted += ` ${time12Hour}`;
+            }
+            
+            return formatted;
+        } catch (e) {
+            return dateStr; // Return original if formatting fails
+        }
+    }
+
+    function convertTo12Hour(time24) {
+        if (!time24) return "";
+        
+        try {
+            // Parse time string (HH:mm format)
+            const [hours, minutes] = time24.split(":");
+            const hour24 = parseInt(hours, 10);
+            const mins = minutes || "00";
+            
+            if (isNaN(hour24)) return time24; // Invalid time, return original
+            
+            // Convert to 12-hour format
+            let hour12 = hour24 % 12;
+            if (hour12 === 0) hour12 = 12; // 0 or 12 both become 12
+            const ampm = hour24 < 12 ? "AM" : "PM";
+            
+            return `${hour12}:${mins} ${ampm}`;
+        } catch (e) {
+            return time24; // Return original if conversion fails
+        }
+    }
+
+    function getStatusBadgeClass(status) {
+        switch(status) {
+            case "Completed":
+                return "bg-success";
+            case "In Progress":
+                return "bg-primary";
+            case "On Hold":
+                return "bg-warning";
+            default:
+                return "bg-secondary";
+        }
+    }
+
+    // Load activities on page load
+    await loadActivities();
+
+    /* ==========================================
+       FETCH MATERIAL ITEMS/UNITS
+    ========================================== */
+    async function loadItemsUnits() {
+        try {
+            const resp = await fetch("{{ url_for('construction.get_items_units') }}");
+            const data = await resp.json();
+            itemsList = data.items || [];
+            unitsList = data.units || [];
+        } catch (e) {
+            console.error("Failed fetching items/units:", e);
+        }
+    }
+
+    function attachAutocomplete(input, list, options = {}) {
+        let index = -1;
+
+        const box = document.createElement("div");
+        box.classList.add("autocomplete-list", "border", "bg-white", "position-absolute");
+        box.style.cssText = "z-index:1000; display:none; max-height:150px; overflow-y:auto;";
+        input.parentElement.style.position = "relative";
+        input.parentElement.appendChild(box);
+
+        function closeBox() {
+            box.style.display = "none";
+            index = -1;
+        }
+
+        function renderList(filtered) {
+            box.innerHTML = filtered
+                .map((v, i) => `<div class="p-1 suggestion-item" data-index="${i}" data-value="${v}">${v}</div>`)
+                .join("");
+            box.style.display = "block";
+        }
+
+        input.addEventListener("input", () => {
+            const val = input.value.trim().toLowerCase();
+            if (!val) return closeBox();
+
+            const filtered = list.filter(item => item.toLowerCase().includes(val));
+            if (!filtered.length) return closeBox();
+
+            renderList(filtered);
+        });
+
+        /* CLICK SELECT */
+        box.addEventListener("click", e => {
+            if (!e.target.classList.contains("suggestion-item")) return;
+            input.value = e.target.dataset.value;
+            closeBox();
+            if (options.nextFocus) options.nextFocus.focus();
+            if (options.onSelect) options.onSelect();
+        });
+
+        /* KEYBOARD CONTROL */
+        input.addEventListener("keydown", e => {
+            const items = box.querySelectorAll(".suggestion-item");
+            const isBoxVisible = box.style.display !== "none";
+            
+            if (e.key === "ArrowDown") {
+                if (items.length > 0 && isBoxVisible) {
+                    e.preventDefault();
+                    index = (index + 1) % items.length;
+                    /* Highlight current item */
+                    items.forEach(el => el.classList.remove("bg-primary", "text-white"));
+                    if (index >= 0) {
+                        items[index].classList.add("bg-primary", "text-white");
+                    }
+                }
+            } else if (e.key === "ArrowUp") {
+                if (items.length > 0 && isBoxVisible) {
+                    e.preventDefault();
+                    index = (index - 1 + items.length) % items.length;
+                    /* Highlight current item */
+                    items.forEach(el => el.classList.remove("bg-primary", "text-white"));
+                    if (index >= 0) {
+                        items[index].classList.add("bg-primary", "text-white");
+                    }
+                }
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (items.length > 0 && isBoxVisible) {
+                    if (index >= 0) {
+                        input.value = items[index].dataset.value;
+                    } else {
+                        input.value = items[0].dataset.value;
+                    }
+                    closeBox();
+                }
+                // Always move focus to next field on Enter
+                if (options.nextFocus) options.nextFocus.focus();
+                if (options.onSelect) options.onSelect();
+                return;
+            }
+        });
+
+        document.addEventListener("click", evt => {
+            if (!box.contains(evt.target) && evt.target !== input) closeBox();
+        });
+    }
+    
+    /* ==========================================
+       MATERIALS — ADD ROW
+    ========================================== */
+    function addMaterialRow(autoFocus = true) {
+        const row = materialsTableBody.insertRow();
+        row.innerHTML = `
+            <td>
+                <div class="position-relative">
+                    <input type="text" class="form-control item-input">
+                </div>
+            </td>
+            <td><input type="number" class="form-control qty-input" step="0.001"></td>
+            <td>
+                <div class="position-relative">
+                    <input type="text" class="form-control unit-input">
+                </div>
+            </td>
+            <td><input type="number" class="form-control unit-price-input" step="0.01"></td>
+            <td><input type="text" class="form-control total-input" readonly></td>
+            <td><button class="btn btn-danger btn-sm del-row">Delete</button></td>
+        `;
+
+        const item = row.querySelector(".item-input");
+        const qty = row.querySelector(".qty-input");
+        const unit = row.querySelector(".unit-input");
+        const price = row.querySelector(".unit-price-input");
+        const total = row.querySelector(".total-input");
+        const del = row.querySelector(".del-row");
+
+        /* Autocomplete with fixed behavior */
+        attachAutocomplete(item, itemsList, {
+            nextFocus: qty,
+            onSelect: () => qty.focus()
+        });
+
+        attachAutocomplete(unit, unitsList, {
+            nextFocus: price
+        });
+
+        /* Calculation */
+        function updateTotal() {
+            total.value = ((+qty.value || 0) * (+price.value || 0)).toFixed(2);
+            computeMaterialsGrandTotal();
+        }
+        qty.addEventListener("input", updateTotal);
+        price.addEventListener("input", updateTotal);
+
+        /* Excel-like field navigation */
+        item.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                qty.focus();
+            }
+        });
+
+        qty.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                unit.focus();
+            }
+        });
+
+        unit.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                price.focus();
+            }
+        });
+
+        price.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                addMaterialRow(true);
+            }
+        });
+
+
+        /* Delete row */
+        del.addEventListener("click", () => {
+            if (materialsTableBody.rows.length > 1) {
+                row.remove();
+                computeMaterialsGrandTotal();
+            }
+        });
+
+        if (autoFocus) item.focus();
+    }
+
+    // Initialize first row ONLY AFTER data is loaded:
+    await loadItemsUnits();
+
+    // attach autocomplete to FIRST static row
+    const firstRow = document.querySelector("#materialsTable tbody tr");
+    const firstItem = firstRow.querySelector(".item-input");
+    const firstQty  = firstRow.querySelector(".qty-input");
+    const firstUnit = firstRow.querySelector(".unit-input");
+    const firstPrice = firstRow.querySelector(".unit-price-input");
+    const firstTotal = firstRow.querySelector(".total-amount-input");
+
+    attachAutocomplete(firstItem, itemsList, {
+        nextFocus: firstQty,
+        onSelect: () => firstQty.focus()
+    });
+
+    attachAutocomplete(firstUnit, unitsList, {
+        nextFocus: firstPrice
+    });
+
+    // Add Enter key handler for first row qty input
+    firstQty.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            firstUnit.focus();
+        }
+    });
+
+    // Add calculation logic for first row
+    function updateFirstTotal() {
+        firstTotal.value = ((+firstQty.value || 0) * (+firstPrice.value || 0)).toFixed(2);
+        computeMaterialsGrandTotal();
+    }
+    firstQty.addEventListener("input", updateFirstTotal);
+    firstPrice.addEventListener("input", updateFirstTotal);
+
+    // Add Enter key handler for first row unit-price input
+    firstPrice.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            updateFirstTotal(); // Compute total before adding new row
+            addMaterialRow(true); // Add new row and focus first column
+        }
+    });
+
+    // Add delete button handler for first row
+    const firstDeleteBtn = firstRow.querySelector(".delete-row-btn");
+    if (firstDeleteBtn) {
+        firstDeleteBtn.addEventListener("click", () => {
+            if (materialsTableBody.rows.length > 1) {
+                firstRow.remove();
+                computeMaterialsGrandTotal();
+            }
+        });
+    }
+
+    /* ==========================================
+       COMPUTE MATERIALS GRAND TOTAL
+    ========================================== */
+    function computeMaterialsGrandTotal() {
+        if (!materialsTableBody || !materialsTotalAmountDisplay) return;
+        
+        let t = 0;
+        [...materialsTableBody.rows].forEach(r => {
+            const totalInput = r.querySelector(".total-amount-input, .total-input");
+            if (totalInput && totalInput.value) {
+                t += parseFloat(totalInput.value) || 0;
+            }
+        });
+        materialsTotalAmountDisplay.textContent = "Total Amount: " + t.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // Initialize grand total on page load
+    computeMaterialsGrandTotal();
+
+    /* ==========================================
+       FETCH NEXT INVOICE NUMBER
+    ========================================== */
+    async function fetchNextInvoiceNumber() {
+        try {
+            const date = materialDate.value;
+            const url = new URL("{{ url_for('construction.next_invoice_number') }}", window.location.origin);
+            if (date) url.searchParams.append("date", date);
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.invoice_number) {
+                invoiceDisplay.textContent = `Next Invoice #: ${data.invoice_number}`;
+                invoiceDisplay.style.display = "block";
+            }
+        } catch(err) {
+            invoiceDisplay.style.display = "none";
+        }
+    }
+    materialDate.addEventListener("change", fetchNextInvoiceNumber);
+
+    /* ==========================================
+       FETCH NEXT INVOICE NUMBER FOR LABOR
+    ========================================== */
+    async function fetchNextLaborInvoiceNumber() {
+        try {
+            const date = laborDate.value;
+            const url = new URL("{{ url_for('construction.next_invoice_number') }}", window.location.origin);
+            if (date) url.searchParams.append("date", date);
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.invoice_number) {
+                laborInvoiceDisplay.textContent = `Next Invoice #: ${data.invoice_number}`;
+                laborInvoiceDisplay.style.display = "block";
+            }
+        } catch(err) {
+            laborInvoiceDisplay.style.display = "none";
+        }
+    }
+    laborDate.addEventListener("change", fetchNextLaborInvoiceNumber);
+
+    /* ==========================================
+       FETCH NEXT INVOICE NUMBER FOR GASOLINE
+    ========================================== */
+    async function fetchNextGasolineInvoiceNumber() {
+        try {
+            const date = gasolineDate.value;
+            const url = new URL("{{ url_for('construction.next_invoice_number') }}", window.location.origin);
+            if (date) url.searchParams.append("date", date);
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.invoice_number) {
+                gasolineInvoiceDisplay.textContent = `Next Invoice #: ${data.invoice_number}`;
+                gasolineInvoiceDisplay.style.display = "block";
+            }
+        } catch(err) {
+            gasolineInvoiceDisplay.style.display = "none";
+        }
+    }
+    gasolineDate.addEventListener("change", fetchNextGasolineInvoiceNumber);
+
+    /* ==========================================
+       FETCH NEXT INVOICE NUMBER FOR DOCUMENTS
+    ========================================== */
+    async function fetchNextDocumentsInvoiceNumber() {
+        try {
+            const date = documentsDate.value;
+            const url = new URL("{{ url_for('construction.next_invoice_number') }}", window.location.origin);
+            if (date) url.searchParams.append("date", date);
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.invoice_number) {
+                documentsInvoiceDisplay.textContent = `Next Invoice #: ${data.invoice_number}`;
+                documentsInvoiceDisplay.style.display = "block";
+            }
+        } catch(err) {
+            documentsInvoiceDisplay.style.display = "none";
+        }
+    }
+    documentsDate.addEventListener("change", fetchNextDocumentsInvoiceNumber);
+
+    /* ==========================================
+       FETCH NEXT INVOICE NUMBER FOR OBLIGATION
+    ========================================== */
+    async function fetchNextObligationInvoiceNumber() {
+        try {
+            const date = obligationDate.value;
+            const url = new URL("{{ url_for('construction.next_invoice_number') }}", window.location.origin);
+            if (date) url.searchParams.append("date", date);
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.invoice_number) {
+                obligationInvoiceDisplay.textContent = `Next Invoice #: ${data.invoice_number}`;
+                obligationInvoiceDisplay.style.display = "block";
+            }
+        } catch(err) {
+            obligationInvoiceDisplay.style.display = "none";
+        }
+    }
+    if (obligationDate) {
+        obligationDate.addEventListener("change", fetchNextObligationInvoiceNumber);
+    }
+
+
+    /* ==========================================
+       SUBMIT MATERIALS
+    ========================================== */
+    submitMaterialsBtn.addEventListener("click", async function() {
+        // Validate date
+        if (!materialDate.value) {
+            alert("Please select a date.");
+            materialDate.focus();
+            return;
+        }
+
+        // Collect all material rows
+        const rows = materialsTableBody.querySelectorAll("tr");
+        const materials = [];
+
+        rows.forEach(row => {
+            const itemInput = row.querySelector(".item-input");
+            const qtyInput = row.querySelector(".qty-input");
+            const unitInput = row.querySelector(".unit-input");
+            const priceInput = row.querySelector(".unit-price-input");
+            const totalInput = row.querySelector(".total-amount-input, .total-input");
+
+            const item = (itemInput?.value || "").trim();
+            const qty = parseFloat(qtyInput?.value) || 0;
+            const unit = (unitInput?.value || "").trim();
+            const unitPrice = parseFloat(priceInput?.value) || 0;
+            const materialAmount = parseFloat(totalInput?.value) || (qty * unitPrice);
+
+            // Only add rows with valid item and qty > 0
+            if (item && qty > 0) {
+                materials.push({
+                    item: item,
+                    qty: qty,
+                    unit: unit,
+                    unit_price: unitPrice,
+                    material_amount: materialAmount
+                });
+            }
+        });
+
+        if (materials.length === 0) {
+            alert("Please add at least one valid material entry (item and quantity required).");
+            return;
+        }
+
+        // Disable button during submission
+        submitMaterialsBtn.disabled = true;
+        submitMaterialsBtn.textContent = "Submitting...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.add_materials', project_id=project.id) }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expense_date: materialDate.value,
+                    expense_type: "Materials",
+                    materials: materials
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Show success message
+                invoiceDisplay.textContent = `✓ ${data.message} Invoice: ${data.invoice_number}`;
+                invoiceDisplay.style.display = "block";
+                invoiceDisplay.classList.remove("text-danger");
+                invoiceDisplay.classList.add("text-success");
+
+                // Clear the form
+                materialDate.value = "";
+                materialsTableBody.innerHTML = `
+                    <tr>
+                        <td>
+                            <div class="position-relative">
+                                <input type="text" class="form-control item-input">
+                            </div>
+                        </td>
+                        <td><input type="number" class="form-control qty-input" min="0" step="0.001"></td>
+                        <td>
+                            <div class="position-relative">
+                                <input type="text" class="form-control unit-input">
+                            </div>
+                        </td>
+                        <td><input type="number" class="form-control unit-price-input" min="0" step="0.01"></td>
+                        <td><input type="text" class="form-control total-amount-input" readonly></td>
+                        <td><button type="button" class="btn btn-sm btn-danger delete-row-btn">Delete</button></td>
+                    </tr>
+                `;
+
+                // Re-initialize first row
+                await loadItemsUnits();
+                const firstRow = document.querySelector("#materialsTable tbody tr");
+                const firstItem = firstRow.querySelector(".item-input");
+                const firstQty = firstRow.querySelector(".qty-input");
+                const firstUnit = firstRow.querySelector(".unit-input");
+                const firstPrice = firstRow.querySelector(".unit-price-input");
+                const firstTotal = firstRow.querySelector(".total-amount-input");
+
+                attachAutocomplete(firstItem, itemsList, {
+                    nextFocus: firstQty,
+                    onSelect: () => firstQty.focus()
+                });
+
+                attachAutocomplete(firstUnit, unitsList, {
+                    nextFocus: firstPrice
+                });
+
+                function updateFirstTotal() {
+                    firstTotal.value = ((+firstQty.value || 0) * (+firstPrice.value || 0)).toFixed(2);
+                    computeMaterialsGrandTotal();
+                }
+                firstQty.addEventListener("input", updateFirstTotal);
+                firstPrice.addEventListener("input", updateFirstTotal);
+
+                firstQty.addEventListener("keydown", e => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        firstUnit.focus();
+                    }
+                });
+
+                firstPrice.addEventListener("keydown", e => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        updateFirstTotal();
+                        addMaterialRow(true);
+                    }
+                });
+                computeMaterialsGrandTotal();
+            } else {
+                // Show error message
+                invoiceDisplay.textContent = `✗ ${data.message || "Error submitting materials."}`;
+                invoiceDisplay.style.display = "block";
+                invoiceDisplay.classList.remove("text-success");
+                invoiceDisplay.classList.add("text-danger");
+            }
+        } catch (error) {
+            console.error("Error submitting materials:", error);
+            invoiceDisplay.textContent = `✗ Error submitting materials. Please try again.`;
+            invoiceDisplay.style.display = "block";
+            invoiceDisplay.classList.remove("text-success");
+            invoiceDisplay.classList.add("text-danger");
+        } finally {
+            submitMaterialsBtn.disabled = false;
+            submitMaterialsBtn.textContent = "Submit";
+        }
+    });
+
+    /* ==========================================
+       CANCEL MATERIALS
+    ========================================== */
+    cancelMaterialsBtn.addEventListener("click", function() {
+        if (confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+            materialsCard.style.display = "none";
+            entryType.value = "";
+        }
+    });
+
+    /* ==========================================
+       FETCH EMPLOYEES
+    ========================================== */
+    let employeesList = [];
+    async function loadEmployees() {
+        try {
+            const resp = await fetch("{{ url_for('construction.get_employees') }}");
+            const data = await resp.json();
+            employeesList = data.employees.map(e => ({id: e.id, name: e.name, rate: e.rate_per_day})) || [];
+        } catch(e) { 
+            console.error(e); 
+        }
+    }
+    await loadEmployees();
+
+    /* ==========================================
+       SHOW/HIDE CARDS BASED ON ENTRY TYPE
+    ========================================== */
+    entryType.addEventListener("change", () => {
+        materialsCard.style.display = "none";
+        laborCard.style.display = "none";
+        gasolineCard.style.display = "none";
+        documentsCard.style.display = "none";
+        if (obligationCard) obligationCard.style.display = "none";
+        if (activityCard) activityCard.style.display = "none";
+
+        if (entryType.value === "Materials") {
+            materialsCard.style.display = "block";
+            fetchNextInvoiceNumber();
+            setTimeout(() => materialDate.focus(), 80);
+        }
+
+        if (entryType.value === "Labor") {
+            laborCard.style.display = "block";
+            fetchNextLaborInvoiceNumber();
+            // Re-initialize first row when Labor card is shown
+            setTimeout(() => {
+                const firstRow = document.querySelector("#laborTable tbody tr");
+                if (firstRow) {
+                    // Remove old event listeners by cloning the row (cleanest way)
+                    const daysInput = firstRow.querySelector(".days-input");
+                    if (daysInput) {
+                        // Re-attach events to ensure they work
+                        attachLaborRowEvents(firstRow);
+                    }
+                }
+                laborDate.focus();
+            }, 80);
+        }
+
+        if (entryType.value === "Gasoline") {
+            gasolineCard.style.display = "block";
+            fetchNextGasolineInvoiceNumber();
+            setTimeout(() => gasolineDate.focus(), 80);
+        }
+
+        if (entryType.value === "Documents") {
+            documentsCard.style.display = "block";
+            fetchNextDocumentsInvoiceNumber();
+            setTimeout(() => documentsDate.focus(), 80);
+        }
+
+        if (entryType.value === "Obligation" && obligationCard) {
+            obligationCard.style.display = "block";
+            fetchNextObligationInvoiceNumber();
+            setTimeout(() => obligationDate.focus(), 80);
+        }
+
+        if (entryType.value === "Activity" && activityCard) {
+            activityCard.style.display = "block";
+            setTimeout(() => activityDate.focus(), 80);
+        }
+    });
+
+
+    /* ==========================================
+       LABOR ROWS
+    ========================================== */
+    function addLaborRow(autoFocus = true) {
+        const tbody = laborTable.querySelector("tbody");
+        if (!tbody) return;
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>
+                <div class="position-relative">
+                    <input type="text" class="form-control employee-input">
+                </div>
+            </td>
+            <td><input class="form-control rate-input" readonly></td>
+            <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+            <td><input class="form-control row-total" readonly></td>
+            <td><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
+        `;
+        attachLaborRowEvents(row);
+        
+        if (autoFocus) {
+            const empInput = row.querySelector(".employee-input");
+            if (empInput) {
+                setTimeout(() => empInput.focus(), 10);
+            }
+        }
+        
+        return row;
+    }
+
+    function attachLaborRowEvents(row) {
+        const empInput = row.querySelector(".employee-input");
+        const rateInput = row.querySelector(".rate-input");
+        const daysInput = row.querySelector(".days-input");
+        const totalInput = row.querySelector(".row-total");
+
+        attachAutocomplete(empInput, employeesList.map(e => e.name), {
+            onSelect: () => {
+                const selectedEmployee = empInput.value.trim();
+                if (!selectedEmployee) return;
+                
+                // Check if this employee is already in another row
+                const allRows = laborTable.querySelectorAll("tbody tr");
+                let isDuplicate = false;
+                
+                for (let otherRow of allRows) {
+                    if (otherRow === row) continue; // Skip current row
+                    const otherEmpInput = otherRow.querySelector(".employee-input");
+                    if (otherEmpInput && otherEmpInput.value.trim() === selectedEmployee) {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+                
+                if (isDuplicate) {
+                    // Clear the selection and show error
+                    empInput.value = "";
+                    empInput.focus();
+                    alert(`Employee "${selectedEmployee}" is already added. Each employee can only be entered once.`);
+                    return;
+                }
+                
+                // Employee is unique, proceed with normal flow
+                const emp = employeesList.find(e => e.name === selectedEmployee);
+                if (emp) rateInput.value = parseFloat(emp.rate).toFixed(2);
+                daysInput.focus();
+                computeTotal();
+            },
+            nextFocus: daysInput
+        });
+
+        function computeTotal() {
+            totalInput.value = ((parseFloat(rateInput.value)||0) * (parseFloat(daysInput.value)||0)).toFixed(2);
+            computeLaborGrandTotal();
+        }
+
+        daysInput.addEventListener("input", computeTotal);
+        
+        // Add Enter key handler for days input - similar to materials table
+        daysInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" || e.keyCode === 13) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                console.log("Enter pressed on days input");
+                
+                // Compute total for current row
+                computeTotal();
+                
+                // Get the labor table and tbody
+                const table = document.getElementById("laborTable");
+                if (!table) {
+                    console.error("Labor table not found");
+                    return;
+                }
+                
+                const tbody = table.querySelector("tbody");
+                if (!tbody) {
+                    console.error("Labor table tbody not found");
+                    return;
+                }
+                
+                console.log("Creating new row");
+                
+                // Create new row
+                const newRow = tbody.insertRow();
+                newRow.innerHTML = `
+                    <td>
+                        <div class="position-relative">
+                            <input type="text" class="form-control employee-input">
+                        </div>
+                    </td>
+                    <td><input class="form-control rate-input" readonly></td>
+                    <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                    <td><input class="form-control row-total" readonly></td>
+                    <td><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
+                `;
+                
+                console.log("New row created, attaching events");
+                
+                // Attach events to new row
+                attachLaborRowEvents(newRow);
+                
+                // Focus on first column
+                setTimeout(() => {
+                    const empInput = newRow.querySelector(".employee-input");
+                    if (empInput) {
+                        console.log("Focusing on new employee input");
+                        empInput.focus();
+                    } else {
+                        console.error("New employee input not found");
+                    }
+                }, 50);
+            }
+        });
+
+        const deleteBtn = row.querySelector(".del-labor-row");
+        if (deleteBtn) {
+            deleteBtn.addEventListener("click", () => {
+                if (laborTable.rows.length > 1) row.remove();
+                computeLaborGrandTotal();
+            });
+        }
+    }
+
+    function computeLaborGrandTotal() {
+        if (!laborTable || !laborTotalAmountDisplay) return;
+        
+        let t = 0;
+        [...laborTable.rows].forEach(r => {
+            const totalInput = r.querySelector(".row-total");
+            if (totalInput && totalInput.value) {
+                t += parseFloat(totalInput.value) || 0;
+            }
+        });
+        laborTotalAmountDisplay.textContent = "Total Amount: "+ t.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // Initialize first static labor row AFTER functions are defined
+    // This works even if the table is hidden (display: none)
+    const firstLaborRow = document.querySelector("#laborTable tbody tr");
+    if (firstLaborRow) {
+        console.log("Initializing first labor row");
+        attachLaborRowEvents(firstLaborRow);
+        console.log("First labor row initialized");
+    } else {
+        console.warn("First labor row not found during initialization");
+    }
+
+    /* ==========================================
+       SUBMIT LABOR
+    ========================================== */
+    submitLaborBtn.addEventListener("click", async function() {
+        // Validate date
+        if (!laborDate.value) {
+            alert("Please select a date.");
+            laborDate.focus();
+            return;
+        }
+
+        // Collect all labor rows
+        const rows = laborTable.querySelectorAll("tbody tr");
+        const laborEntries = [];
+
+        rows.forEach(row => {
+            const empInput = row.querySelector(".employee-input");
+            const rateInput = row.querySelector(".rate-input");
+            const daysInput = row.querySelector(".days-input");
+            const totalInput = row.querySelector(".row-total");
+
+            const employeeName = (empInput?.value || "").trim();
+            const ratePerDay = parseFloat(rateInput?.value) || 0;
+            const days = parseFloat(daysInput?.value) || 0;
+            const laborCharge = parseFloat(totalInput?.value) || (ratePerDay * days);
+
+            // Only add rows with valid employee and days > 0
+            if (employeeName && days > 0) {
+                // Find employee ID from employeesList
+                const emp = employeesList.find(e => e.name === employeeName);
+                if (emp) {
+                    laborEntries.push({
+                        employee_name: employeeName,
+                        labor_id: emp.id || null,
+                        rate_per_day: ratePerDay,
+                        days: days,
+                        labor_charge: laborCharge
+                    });
+                }
+            }
+        });
+
+        if (laborEntries.length === 0) {
+            alert("Please add at least one valid labor entry (employee and days required).");
+            return;
+        }
+
+        // Disable button during submission
+        submitLaborBtn.disabled = true;
+        submitLaborBtn.textContent = "Submitting...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.add_labor', project_id=project.id) }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expense_date: laborDate.value,
+                    expense_type: "Labor",
+                    labor_entries: laborEntries
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Show success message
+                laborInvoiceDisplay.textContent = `✓ ${data.message} Invoice: ${data.invoice_number}`;
+                laborInvoiceDisplay.style.display = "block";
+                laborInvoiceDisplay.classList.remove("text-danger");
+                laborInvoiceDisplay.classList.add("text-success");
+
+                // Clear the form
+                laborDate.value = "";
+                laborTable.querySelector("tbody").innerHTML = `
+                    <tr>
+                        <td>
+                            <div class="position-relative">
+                                <input type="text" class="form-control employee-input">
+                            </div>
+                        </td>
+                        <td><input class="form-control rate-input" readonly></td>
+                        <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                        <td><input class="form-control row-total" readonly></td>
+                        <td><button type="button" class="btn btn-sm btn-danger del-labor-row">Delete</button></td>
+                    </tr>
+                `;
+
+                // Re-initialize first row
+                await loadEmployees();
+                const firstRow = document.querySelector("#laborTable tbody tr");
+                if (firstRow) {
+                    attachLaborRowEvents(firstRow);
+                }
+                computeLaborGrandTotal();
+
+            } else {
+                // Show error message
+                laborInvoiceDisplay.textContent = `✗ ${data.message || "Error submitting labor entries."}`;
+                laborInvoiceDisplay.style.display = "block";
+                laborInvoiceDisplay.classList.remove("text-success");
+                laborInvoiceDisplay.classList.add("text-danger");
+            }
+        } catch (error) {
+            console.error("Error submitting labor:", error);
+            laborInvoiceDisplay.textContent = `✗ Error submitting labor. Please try again.`;
+            laborInvoiceDisplay.style.display = "block";
+            laborInvoiceDisplay.classList.remove("text-success");
+            laborInvoiceDisplay.classList.add("text-danger");
+        } finally {
+            submitLaborBtn.disabled = false;
+            submitLaborBtn.textContent = "Submit";
+        }
+    });
+
+    /* ==========================================
+       CANCEL LABOR
+    ========================================== */
+    cancelLaborBtn.addEventListener("click", function() {
+        if (confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+            laborCard.style.display = "none";
+            entryType.value = "";
+        }
+    });
+
+    /* ==========================================
+       GASOLINE ROWS
+    ========================================== */
+    function addGasolineRow(autoFocus = true) {
+        const tbody = gasolineTable.querySelector("tbody");
+        if (!tbody) return;
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="number" class="form-control gasoline-amount-input" min="0" step="0.01"></td>
+            <td><button type="button" class="btn btn-danger btn-sm del-gasoline-row">Delete</button></td>
+        `;
+        attachGasolineRowEvents(row);
+        
+        if (autoFocus) {
+            const amountInput = row.querySelector(".gasoline-amount-input");
+            if (amountInput) {
+                setTimeout(() => amountInput.focus(), 10);
+            }
+        }
+        
+        return row;
+    }
+
+    function attachGasolineRowEvents(row) {
+        const amountInput = row.querySelector(".gasoline-amount-input");
+        const deleteBtn = row.querySelector(".del-gasoline-row");
+
+        // Update total when amount changes
+        amountInput.addEventListener("input", computeGasolineGrandTotal);
+
+        // Add Enter key handler to add new row
+        amountInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                computeGasolineGrandTotal();
+                addGasolineRow(true);
+            }
+        });
+
+        // Delete button handler
+        if (deleteBtn) {
+            deleteBtn.addEventListener("click", () => {
+                const tbody = gasolineTable.querySelector("tbody");
+                if (tbody && tbody.rows.length > 1) {
+                    row.remove();
+                    computeGasolineGrandTotal();
+                }
+            });
+        }
+    }
+
+    function computeGasolineGrandTotal() {
+        if (!gasolineTable || !gasolineTotalAmountDisplay) return;
+        
+        let t = 0;
+        [...gasolineTable.rows].forEach(r => {
+            const amountInput = r.querySelector(".gasoline-amount-input");
+            if (amountInput && amountInput.value) {
+                t += parseFloat(amountInput.value) || 0;
+            }
+        });
+        gasolineTotalAmountDisplay.textContent = "Total Amount: " + t.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // Initialize first static gasoline row
+    const firstGasolineRow = document.querySelector("#gasolineTable tbody tr");
+    if (firstGasolineRow) {
+        attachGasolineRowEvents(firstGasolineRow);
+    }
+
+    /* ==========================================
+       SUBMIT GASOLINE
+    ========================================== */
+    submitGasolineBtn.addEventListener("click", async function() {
+        // Validate date
+        if (!gasolineDate.value) {
+            alert("Please select a date.");
+            gasolineDate.focus();
+            return;
+        }
+
+        // Collect all gasoline entries
+        const rows = gasolineTable.querySelectorAll("tbody tr");
+        const gasolineEntries = [];
+
+        rows.forEach(row => {
+            const amountInput = row.querySelector(".gasoline-amount-input");
+            const amount = parseFloat(amountInput?.value) || 0;
+
+            // Only add rows with valid amount > 0
+            if (amount > 0) {
+                gasolineEntries.push({
+                    gasoline_amount: amount
+                });
+            }
+        });
+
+        if (gasolineEntries.length === 0) {
+            alert("Please add at least one valid gasoline entry (amount required).");
+            return;
+        }
+
+        // Disable button during submission
+        submitGasolineBtn.disabled = true;
+        submitGasolineBtn.textContent = "Submitting...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.add_gasoline', project_id=project.id) }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expense_date: gasolineDate.value,
+                    expense_type: "Gasoline",
+                    gasoline_entries: gasolineEntries
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Show success message
+                gasolineInvoiceDisplay.textContent = `✓ ${data.message} Invoice: ${data.invoice_number}`;
+                gasolineInvoiceDisplay.style.display = "block";
+                gasolineInvoiceDisplay.classList.remove("text-danger");
+                gasolineInvoiceDisplay.classList.add("text-success");
+
+                // Clear the form
+                gasolineDate.value = "";
+                gasolineTable.querySelector("tbody").innerHTML = `
+                    <tr>
+                        <td><input type="number" class="form-control gasoline-amount-input" min="0" step="0.01"></td>
+                        <td><button type="button" class="btn btn-sm btn-danger del-gasoline-row">Delete</button></td>
+                    </tr>
+                `;
+
+                // Re-initialize first row
+                const firstRow = document.querySelector("#gasolineTable tbody tr");
+                if (firstRow) {
+                    attachGasolineRowEvents(firstRow);
+                }
+                computeGasolineGrandTotal();
+
+            } else {
+                // Show error message
+                gasolineInvoiceDisplay.textContent = `✗ ${data.message || "Error submitting gasoline entries."}`;
+                gasolineInvoiceDisplay.style.display = "block";
+                gasolineInvoiceDisplay.classList.remove("text-success");
+                gasolineInvoiceDisplay.classList.add("text-danger");
+            }
+        } catch (error) {
+            console.error("Error submitting gasoline:", error);
+            gasolineInvoiceDisplay.textContent = `✗ Error submitting gasoline. Please try again.`;
+            gasolineInvoiceDisplay.style.display = "block";
+            gasolineInvoiceDisplay.classList.remove("text-success");
+            gasolineInvoiceDisplay.classList.add("text-danger");
+        } finally {
+            submitGasolineBtn.disabled = false;
+            submitGasolineBtn.textContent = "Submit";
+        }
+    });
+
+    /* ==========================================
+       CANCEL GASOLINE
+    ========================================== */
+    cancelGasolineBtn.addEventListener("click", function() {
+        if (confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+            gasolineCard.style.display = "none";
+            entryType.value = "";
+        }
+    });
+
+    /* ==========================================
+       DOCUMENTS ROWS
+    ========================================== */
+    function addDocumentRow(autoFocus = true) {
+        const tbody = documentsTable.querySelector("tbody");
+        if (!tbody) return;
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" class="form-control document-ref-input"></td>
+            <td><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
+            <td><button type="button" class="btn btn-danger btn-sm del-document-row">Delete</button></td>
+        `;
+        attachDocumentRowEvents(row);
+        
+        if (autoFocus) {
+            const refInput = row.querySelector(".document-ref-input");
+            if (refInput) {
+                setTimeout(() => refInput.focus(), 10);
+            }
+        }
+        
+        return row;
+    }
+
+    function attachDocumentRowEvents(row) {
+        const refInput = row.querySelector(".document-ref-input");
+        const amountInput = row.querySelector(".document-amount-input");
+        const deleteBtn = row.querySelector(".del-document-row");
+
+        // Update total when amount changes
+        amountInput.addEventListener("input", computeDocumentsGrandTotal);
+
+        // Add Enter key handler for document ref input
+        refInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                amountInput.focus();
+            }
+        });
+
+        // Add Enter key handler for amount input
+        amountInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                computeDocumentsGrandTotal();
+                addDocumentRow(true);
+            }
+        });
+
+        // Delete button handler
+        if (deleteBtn) {
+            deleteBtn.addEventListener("click", () => {
+                const tbody = documentsTable.querySelector("tbody");
+                if (tbody && tbody.rows.length > 1) {
+                    row.remove();
+                    computeDocumentsGrandTotal();
+                }
+            });
+        }
+    }
+
+    function computeDocumentsGrandTotal() {
+        if (!documentsTable || !documentsTotalAmountDisplay) return;
+        
+        let t = 0;
+        [...documentsTable.rows].forEach(r => {
+            const amountInput = r.querySelector(".document-amount-input");
+            if (amountInput && amountInput.value) {
+                t += parseFloat(amountInput.value) || 0;
+            }
+        });
+        documentsTotalAmountDisplay.textContent = "Total Amount: " + t.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // Initialize first static document row
+    const firstDocumentRow = document.querySelector("#documentsTable tbody tr");
+    if (firstDocumentRow) {
+        attachDocumentRowEvents(firstDocumentRow);
+    }
+
+    /* ==========================================
+       SUBMIT DOCUMENTS
+    ========================================== */
+    submitDocumentsBtn.addEventListener("click", async function() {
+        // Validate date
+        if (!documentsDate.value) {
+            alert("Please select a date.");
+            documentsDate.focus();
+            return;
+        }
+
+        // Collect all document entries
+        const rows = documentsTable.querySelectorAll("tbody tr");
+        const documentEntries = [];
+
+        rows.forEach(row => {
+            const refInput = row.querySelector(".document-ref-input");
+            const amountInput = row.querySelector(".document-amount-input");
+
+            const documentRef = (refInput?.value || "").trim();
+            const documentAmount = parseFloat(amountInput?.value) || 0;
+
+            // Only add rows with valid reference and amount > 0
+            if (documentRef && documentAmount > 0) {
+                documentEntries.push({
+                    document_ref: documentRef,
+                    document_amount: documentAmount
+                });
+            }
+        });
+
+        if (documentEntries.length === 0) {
+            alert("Please add at least one valid document entry (reference and amount required).");
+            return;
+        }
+
+        // Disable button during submission
+        submitDocumentsBtn.disabled = true;
+        submitDocumentsBtn.textContent = "Submitting...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.add_documents', project_id=project.id) }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expense_date: documentsDate.value,
+                    expense_type: "Documents",
+                    document_entries: documentEntries
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Show success message
+                documentsInvoiceDisplay.textContent = `✓ ${data.message} Invoice: ${data.invoice_number}`;
+                documentsInvoiceDisplay.style.display = "block";
+                documentsInvoiceDisplay.classList.remove("text-danger");
+                documentsInvoiceDisplay.classList.add("text-success");
+
+                // Clear the form
+                documentsDate.value = "";
+                documentsTable.querySelector("tbody").innerHTML = `
+                    <tr>
+                        <td><input type="text" class="form-control document-ref-input"></td>
+                        <td><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
+                        <td><button type="button" class="btn btn-sm btn-danger del-document-row">Delete</button></td>
+                    </tr>
+                `;
+
+                // Re-initialize first row
+                const firstRow = document.querySelector("#documentsTable tbody tr");
+                if (firstRow) {
+                    attachDocumentRowEvents(firstRow);
+                }
+                computeDocumentsGrandTotal();
+
+            } else {
+                // Show error message
+                documentsInvoiceDisplay.textContent = `✗ ${data.message || "Error submitting document entries."}`;
+                documentsInvoiceDisplay.style.display = "block";
+                documentsInvoiceDisplay.classList.remove("text-success");
+                documentsInvoiceDisplay.classList.add("text-danger");
+            }
+        } catch (error) {
+            console.error("Error submitting documents:", error);
+            documentsInvoiceDisplay.textContent = `✗ Error submitting documents. Please try again.`;
+            documentsInvoiceDisplay.style.display = "block";
+            documentsInvoiceDisplay.classList.remove("text-success");
+            documentsInvoiceDisplay.classList.add("text-danger");
+        } finally {
+            submitDocumentsBtn.disabled = false;
+            submitDocumentsBtn.textContent = "Submit";
+        }
+    });
+
+    /* ==========================================
+       CANCEL DOCUMENTS
+    ========================================== */
+    cancelDocumentsBtn.addEventListener("click", function() {
+        if (confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+            documentsCard.style.display = "none";
+            entryType.value = "";
+        }
+    });
+
+    /* ==========================================
+       OBLIGATION ROWS
+    ========================================== */
+    function addObligationRow(autoFocus = true) {
+        const tbody = obligationTable.querySelector("tbody");
+        if (!tbody) return;
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" class="form-control obligation-ref-input"></td>
+            <td><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
+            <td><button type="button" class="btn btn-danger btn-sm del-obligation-row">Delete</button></td>
+        `;
+        attachObligationRowEvents(row);
+        
+        if (autoFocus) {
+            const refInput = row.querySelector(".obligation-ref-input");
+            if (refInput) {
+                setTimeout(() => refInput.focus(), 10);
+            }
+        }
+        
+        return row;
+    }
+
+    function attachObligationRowEvents(row) {
+        const refInput = row.querySelector(".obligation-ref-input");
+        const amountInput = row.querySelector(".obligation-amount-input");
+        const deleteBtn = row.querySelector(".del-obligation-row");
+
+        // Update total when amount changes
+        amountInput.addEventListener("input", computeObligationGrandTotal);
+
+        // Add Enter key handler for obligation ref input
+        refInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                amountInput.focus();
+            }
+        });
+
+        // Add Enter key handler for amount input
+        amountInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                computeObligationGrandTotal();
+                addObligationRow(true);
+            }
+        });
+
+        // Delete button handler
+        if (deleteBtn) {
+            deleteBtn.addEventListener("click", () => {
+                const tbody = obligationTable.querySelector("tbody");
+                if (tbody && tbody.rows.length > 1) {
+                    row.remove();
+                    computeObligationGrandTotal();
+                }
+            });
+        }
+    }
+
+    function computeObligationGrandTotal() {
+        if (!obligationTable || !obligationTotalAmountDisplay) return;
+        
+        let t = 0;
+        [...obligationTable.rows].forEach(r => {
+            const amountInput = r.querySelector(".obligation-amount-input");
+            if (amountInput && amountInput.value) {
+                t += parseFloat(amountInput.value) || 0;
+            }
+        });
+        obligationTotalAmountDisplay.textContent = "Total Amount: " + t.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // Initialize first static obligation row
+    const firstObligationRow = document.querySelector("#obligationTable tbody tr");
+    if (firstObligationRow) {
+        attachObligationRowEvents(firstObligationRow);
+    }
+
+    /* ==========================================
+       SUBMIT OBLIGATION
+    ========================================== */
+    if (submitObligationBtn) {
+        submitObligationBtn.addEventListener("click", async function() {
+        // Validate date
+        if (!obligationDate.value) {
+            alert("Please select a date.");
+            obligationDate.focus();
+            return;
+        }
+
+        // Collect all obligation entries
+        const rows = obligationTable.querySelectorAll("tbody tr");
+        const obligationEntries = [];
+
+        rows.forEach(row => {
+            const refInput = row.querySelector(".obligation-ref-input");
+            const amountInput = row.querySelector(".obligation-amount-input");
+
+            const obligationRef = (refInput?.value || "").trim();
+            const obligationAmount = parseFloat(amountInput?.value) || 0;
+
+            // Only add rows with valid reference and amount > 0
+            if (obligationRef && obligationAmount > 0) {
+                obligationEntries.push({
+                    obligation_ref: obligationRef,
+                    obligation_amount: obligationAmount
+                });
+            }
+        });
+
+        if (obligationEntries.length === 0) {
+            alert("Please add at least one valid obligation entry (description and amount required).");
+            return;
+        }
+
+        // Disable button during submission
+        submitObligationBtn.disabled = true;
+        submitObligationBtn.textContent = "Submitting...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.add_obligation', project_id=project.id) }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expense_date: obligationDate.value,
+                    expense_type: "Obligation",
+                    obligation_entries: obligationEntries
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Show success message
+                obligationInvoiceDisplay.textContent = `✓ ${data.message} Invoice: ${data.invoice_number}`;
+                obligationInvoiceDisplay.style.display = "block";
+                obligationInvoiceDisplay.classList.remove("text-danger");
+                obligationInvoiceDisplay.classList.add("text-success");
+
+                // Clear the form
+                obligationDate.value = "";
+                obligationTable.querySelector("tbody").innerHTML = `
+                    <tr>
+                        <td><input type="text" class="form-control obligation-ref-input"></td>
+                        <td><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
+                        <td><button type="button" class="btn btn-sm btn-danger del-obligation-row">Delete</button></td>
+                    </tr>
+                `;
+
+                // Re-initialize first row
+                const firstRow = document.querySelector("#obligationTable tbody tr");
+                if (firstRow) {
+                    attachObligationRowEvents(firstRow);
+                }
+                computeObligationGrandTotal();
+
+            } else {
+                // Show error message
+                obligationInvoiceDisplay.textContent = `✗ ${data.message || "Error submitting obligation entries."}`;
+                obligationInvoiceDisplay.style.display = "block";
+                obligationInvoiceDisplay.classList.remove("text-success");
+                obligationInvoiceDisplay.classList.add("text-danger");
+            }
+        } catch (error) {
+            console.error("Error submitting obligation:", error);
+            obligationInvoiceDisplay.textContent = `✗ Error submitting obligation. Please try again.`;
+            obligationInvoiceDisplay.style.display = "block";
+            obligationInvoiceDisplay.classList.remove("text-success");
+            obligationInvoiceDisplay.classList.add("text-danger");
+        } finally {
+            submitObligationBtn.disabled = false;
+            submitObligationBtn.textContent = "Submit";
+        }
+        });
+    }
+
+    /* ==========================================
+       CANCEL OBLIGATION
+    ========================================== */
+    if (cancelObligationBtn) {
+        cancelObligationBtn.addEventListener("click", function() {
+            if (confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+                if (obligationCard) obligationCard.style.display = "none";
+                entryType.value = "";
+            }
+        });
+    }
+
+    /* ==========================================
+       ACTIVITY ROWS
+    ========================================== */
+    function addActivityRow(autoFocus = true) {
+        const tbody = activityTable.querySelector("tbody");
+        if (!tbody) return;
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" class="form-control activity-input"></td>
+            <td><input type="datetime-local" class="form-control activity-date-input"></td>
+            <td>
+                <select class="form-control activity-status-input">
+                    <option value="Pending" selected>Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="On Hold">On Hold</option>
+                </select>
+            </td>
+            <td><button type="button" class="btn btn-danger btn-sm del-activity-row">Delete</button></td>
+        `;
+        attachActivityRowEvents(row);
+        
+        if (autoFocus) {
+            const activityInput = row.querySelector(".activity-input");
+            if (activityInput) {
+                setTimeout(() => activityInput.focus(), 10);
+            }
+        }
+        
+        return row;
+    }
+
+    function attachActivityRowEvents(row) {
+        const activityInput = row.querySelector(".activity-input");
+        const dateInput = row.querySelector(".activity-date-input");
+        const statusInput = row.querySelector(".activity-status-input");
+        const deleteBtn = row.querySelector(".del-activity-row");
+
+        // Add Enter key handler for activity input
+        activityInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                dateInput.focus();
+            }
+        });
+
+        // Add Enter key handler for date input
+        dateInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                statusInput.focus();
+            }
+        });
+
+        // Add Enter key handler for status input
+        statusInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                addActivityRow(true);
+            }
+        });
+
+        // Delete button handler
+        if (deleteBtn) {
+            deleteBtn.addEventListener("click", () => {
+                const tbody = activityTable.querySelector("tbody");
+                if (tbody && tbody.rows.length > 1) {
+                    row.remove();
+                }
+            });
+        }
+    }
+
+    // Initialize first static activity row
+    const firstActivityRow = document.querySelector("#activityTable tbody tr");
+    if (firstActivityRow) {
+        attachActivityRowEvents(firstActivityRow);
+    }
+
+    /* ==========================================
+       SUBMIT ACTIVITY
+    ========================================== */
+    if (submitActivityBtn) {
+        submitActivityBtn.addEventListener("click", async function() {
+        // Validate date
+        if (!activityDate.value) {
+            alert("Please select a date.");
+            activityDate.focus();
+            return;
+        }
+
+        // Collect all activity entries
+        const rows = activityTable.querySelectorAll("tbody tr");
+        const activityEntries = [];
+
+        rows.forEach(row => {
+            const activityInput = row.querySelector(".activity-input");
+            const dateInput = row.querySelector(".activity-date-input");
+            const statusInput = row.querySelector(".activity-status-input");
+
+            const activity = (activityInput?.value || "").trim();
+            const activityDate = dateInput?.value || "";
+            const activityStatus = statusInput?.value || "Pending";
+
+            // Only add rows with valid activity description
+            if (activity) {
+                activityEntries.push({
+                    activity: activity,
+                    activity_date: activityDate,
+                    activity_status: activityStatus
+                });
+            }
+        });
+
+        if (activityEntries.length === 0) {
+            alert("Please add at least one valid activity entry (description required).");
+            return;
+        }
+
+        // Disable button during submission
+        submitActivityBtn.disabled = true;
+        submitActivityBtn.textContent = "Submitting...";
+
+        try {
+            const response = await fetch(`{{ url_for('construction.add_activity', project_id=project.id) }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expense_date: activityDate.value,
+                    expense_type: "Activity",
+                    activity_entries: activityEntries
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Show success message
+                alert(data.message || "Activity entries saved successfully!");
+
+                // Reload activities table
+                await loadActivities();
+
+                // Clear the form
+                activityDate.value = "";
+                activityTable.querySelector("tbody").innerHTML = `
+                    <tr>
+                        <td><input type="text" class="form-control activity-input"></td>
+                        <td><input type="datetime-local" class="form-control activity-date-input"></td>
+                        <td>
+                            <select class="form-control activity-status-input">
+                                <option value="Pending" selected>Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="On Hold">On Hold</option>
+                            </select>
+                        </td>
+                        <td><button type="button" class="btn btn-sm btn-danger del-activity-row">Delete</button></td>
+                    </tr>
+                `;
+
+                // Re-initialize first row
+                const firstRow = document.querySelector("#activityTable tbody tr");
+                if (firstRow) {
+                    attachActivityRowEvents(firstRow);
+                }
+
+            } else {
+                // Show error message
+                alert(data.message || "Error submitting activity entries.");
+            }
+        } catch (error) {
+            console.error("Error submitting activity:", error);
+            alert("Error submitting activity. Please try again.");
+        } finally {
+            submitActivityBtn.disabled = false;
+            submitActivityBtn.textContent = "Submit";
+        }
+        });
+    }
+
+    /* ==========================================
+       CANCEL ACTIVITY
+    ========================================== */
+    if (cancelActivityBtn) {
+        cancelActivityBtn.addEventListener("click", function() {
+            if (confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+                if (activityCard) activityCard.style.display = "none";
+                entryType.value = "";
+            }
+        });
+    }
+
+    /* ==========================================
+       DELETE ACTIVITY
+    ========================================== */
+    window.deleteActivity = async function(activityId) {
+        if (!confirm("Are you sure you want to delete this activity?")) {
+            return;
+        }
+
+        try {
+            const url = `{{ url_for('construction.delete_activity', project_id=project.id, activity_id=0) }}`.replace('/0', `/${activityId}`);
+            const response = await fetch(url, {
+                method: "DELETE"
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message || "Activity deleted successfully!");
+                await loadActivities();
+            } else {
+                alert(data.message || "Error deleting activity.");
+            }
+        } catch (error) {
+            console.error("Error deleting activity:", error);
+            alert("Error deleting activity. Please try again.");
+        }
+    };
+
+});
+</script>
+
+
+
+
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

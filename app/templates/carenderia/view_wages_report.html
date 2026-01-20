@@ -1,0 +1,258 @@
+{% extends "carenderia/home.html" %}
+
+{% block content %}
+<!-- Title Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">View Wages Report</h3>
+            <a href="{{ url_for('carenderia.carenderia_home') }}" class="btn btn-light btn-sm">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Month Filter Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Filter by Month</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="filterMonth" class="form-label fw-bold">Select Month</label>
+                <input type="month" class="form-control" id="filterMonth" name="filter_month">
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-success" id="loadMonthBtn">Load Month</button>
+                <button type="button" class="btn btn-secondary" id="clearFilterBtn">Clear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Summary Card -->
+<div class="card shadow-sm mb-4" id="monthlySummaryCard" style="display: none;">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Monthly Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-3">
+                    <span class="fw-bold fs-6">Total Wages</span>
+                    <span class="fw-bold fs-6" id="monthlyTotalWages">0.00</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-3">
+                    <span class="fw-bold fs-6">Total Employees</span>
+                    <span class="fw-bold fs-6" id="monthlyTotalEmployees">0</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-3">
+                    <span class="fw-bold fs-6">Days with Wages</span>
+                    <span class="fw-bold fs-6" id="monthlyTotalDays">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Details Accordion Card -->
+<div class="card shadow-sm" id="dailyDetailsCard" style="display: none;">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Daily Wages Details</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="accordion" id="dailyAccordion">
+            <!-- Accordion items will be populated here -->
+        </div>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div class="card shadow-sm" id="emptyStateCard">
+    <div class="card-body text-center py-5">
+        <p class="text-muted mb-0">Select a month and click "Load Month" to view the wages report.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let monthlyData = {};
+
+    // Helper function to format numbers with commas
+    function formatAmount(num) {
+        return parseFloat(num || 0).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // Format date to "19 Dec 2025" format
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    }
+
+    // Load wages for selected month
+    document.getElementById('loadMonthBtn').addEventListener('click', async function() {
+        const filterMonth = document.getElementById('filterMonth').value;
+        
+        if (!filterMonth) {
+            alert('Please select a month.');
+            return;
+        }
+
+        try {
+            const resp = await fetch(`{{ url_for("carenderia.get_wages_by_month") }}?month=${filterMonth}`);
+            const data = await resp.json();
+            
+            if (resp.ok && data.success) {
+                monthlyData = data.monthly_data || {};
+                updateMonthlySummary();
+                updateDailyAccordion();
+                document.getElementById('monthlySummaryCard').style.display = '';
+                document.getElementById('dailyDetailsCard').style.display = '';
+                document.getElementById('emptyStateCard').style.display = 'none';
+            } else {
+                alert(data.error || 'Failed to load wages.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error loading wages. Please try again.');
+        }
+    });
+
+    // Clear filter
+    document.getElementById('clearFilterBtn').addEventListener('click', function() {
+        document.getElementById('filterMonth').value = '';
+        monthlyData = {};
+        document.getElementById('monthlySummaryCard').style.display = 'none';
+        document.getElementById('dailyDetailsCard').style.display = 'none';
+        document.getElementById('emptyStateCard').style.display = '';
+    });
+
+    // Update monthly summary
+    function updateMonthlySummary() {
+        let totalWages = 0;
+        let totalDays = 0;
+        let uniqueEmployees = new Set();
+
+        Object.keys(monthlyData).forEach(date => {
+            const dayData = monthlyData[date];
+            totalWages += parseFloat(dayData.total_wages || 0);
+            totalDays += 1;
+            
+            // Count unique employees
+            if (dayData.wages && dayData.wages.length > 0) {
+                dayData.wages.forEach(wage => {
+                    if (wage.emp_id) {
+                        uniqueEmployees.add(wage.emp_id);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('monthlyTotalWages').textContent = formatAmount(totalWages);
+        document.getElementById('monthlyTotalEmployees').textContent = uniqueEmployees.size;
+        document.getElementById('monthlyTotalDays').textContent = totalDays;
+    }
+
+    // Update daily accordion
+    function updateDailyAccordion() {
+        const accordion = document.getElementById('dailyAccordion');
+        accordion.innerHTML = '';
+
+        // Sort dates in descending order (newest first)
+        const sortedDates = Object.keys(monthlyData).sort((a, b) => new Date(b) - new Date(a));
+
+        sortedDates.forEach((date, index) => {
+            const dayData = monthlyData[date];
+            const accordionId = `accordion-${date.replace(/-/g, '')}`;
+            const collapseId = `collapse-${date.replace(/-/g, '')}`;
+            const isFirst = index === 0;
+
+            const accordionItem = document.createElement('div');
+            accordionItem.className = 'accordion-item';
+            accordionItem.innerHTML = `
+                <h2 class="accordion-header" id="heading-${accordionId}">
+                    <button class="accordion-button ${isFirst ? '' : 'collapsed'}" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
+                            aria-expanded="${isFirst ? 'true' : 'false'}" 
+                            aria-controls="${collapseId}">
+                        <div class="d-flex justify-content-between w-100 me-3">
+                            <span class="fw-bold">${formatDate(date)}</span>
+                            <span class="fw-bold text-end ms-3">
+                                Total: ${formatAmount(parseFloat(dayData.total_wages || 0))}
+                            </span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="${collapseId}" class="accordion-collapse collapse ${isFirst ? 'show' : ''}" 
+                     aria-labelledby="heading-${accordionId}" data-bs-parent="#dailyAccordion">
+                    <div class="accordion-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded mb-2">
+                                    <span class="fw-bold">Total Wages</span>
+                                    <span class="fw-bold">${formatAmount(parseFloat(dayData.total_wages || 0))}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded mb-2">
+                                    <span class="fw-bold">Number of Employees</span>
+                                    <span class="fw-bold">${dayData.wages ? dayData.wages.length : 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="fw-bold mb-2">Employee Wages:</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead style="position: sticky; top: 0; background-color: #d1e7dd; z-index: 10;">
+                                            <tr>
+                                                <th style="background-color: #d1e7dd;">Employee Name</th>
+                                                <th style="background-color: #d1e7dd;">Role</th>
+                                                <th style="background-color: #d1e7dd;">Rate per Day</th>
+                                                <th style="background-color: #d1e7dd;">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${getWageRows(dayData.wages || [])}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            accordion.appendChild(accordionItem);
+        });
+    }
+
+    // Get wage rows HTML
+    function getWageRows(wages) {
+        if (wages.length === 0) {
+            return '<tr><td colspan="4" class="text-center text-muted py-2">No wages recorded for this date</td></tr>';
+        }
+
+        return wages.map(wage => `
+            <tr>
+                <td class="fw-bold">${wage.emp_name || 'N/A'}</td>
+                <td>${wage.emp_role || 'N/A'}</td>
+                <td class="text-end">${formatAmount(parseFloat(wage.emp_rate || 0))}</td>
+                <td class="text-end fw-bold">${formatAmount(parseFloat(wage.amount || 0))}</td>
+            </tr>
+        `).join('');
+    }
+</script>
+{% endblock %}

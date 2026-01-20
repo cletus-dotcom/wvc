@@ -1,0 +1,241 @@
+<!-- app/templates/construction/home.html -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction Home</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+<style>
+    .dropdown-menu .dropdown-item:hover {
+        background-color: #add8e6 !important;
+        color: #000 !important;
+    }
+
+    .dropdown-item.corporate-item:hover {
+        background-color: #0d6efd;
+        color: white !important;
+    }
+
+    /* Highlight table row on hover */
+    .project-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .project-row:hover {
+        background-color: rgba(13, 110, 253, 0.12); /* subtle Bootstrap-primary tint */
+    }
+
+    /* Optional sticky table header */
+    thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 2;
+    }
+
+    /* override Bootstrap striped rows */
+    .table-striped > tbody > tr.project-row:hover > * {
+        background-color: rgba(13, 110, 253, 0.18) !important;
+    }
+
+
+</style>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+
+            <!-- LEFT MENU TOGGLER -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+
+                <!-- LEFT NAV ITEMS -->
+                <ul class="navbar-nav me-auto">
+
+                    <!-- HOME -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'core.dashboard' %}active{% endif %}"
+                        href="{{ url_for('core.dashboard') }}">
+                            SMBC
+                        </a>
+                    </li>
+
+                    <!-- ENTRIES -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold {% if request.endpoint == 'construction.new_project' %}active{% endif %}"
+                        href="#" role="button" data-bs-toggle="dropdown">
+                            Settings
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('core.manage_employees') }}">
+                                    Manage Workers
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- CORPORATE (visible only for Corporate users) -->
+                    {% if session.get('department') == 'Corporate' %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold
+                            {% if request.endpoint in [
+                                'construction.new_project',
+                                'construction.update_project',
+                                'core.manage_department'
+                            ] %}active{% endif %}"
+                        href="#" id="corporateDropdown" role="button"
+                        data-bs-toggle="dropdown">
+                            Corporate
+                        </a>
+
+                        <ul class="dropdown-menu" aria-labelledby="corporateDropdown">
+
+                            <!-- New Project -->
+                            <li>
+                                <a class="dropdown-item corporate-item"
+                                href="{{ url_for('construction.new_project') }}">
+                                    New Project
+                                </a>
+                            </li>
+
+                            <!-- Update Project -->
+                            <li>
+                                <a class="dropdown-item corporate-item"
+                                href="{{ url_for('construction.update_project') }}">
+                                    Update Project
+                                </a>
+                            </li>
+
+                            <!-- Separator -->
+                            <li><hr class="dropdown-divider"></li>
+
+                            <!-- Manage Department -->
+                            <li>
+                                <a class="dropdown-item"
+                                href="{{ url_for('core.manage_department') }}">
+                                    Manage Department
+                                </a>
+                            </li>
+
+                            <!-- Separator -->
+                            <li><hr class="dropdown-divider"></li>
+
+                            <!-- View Balance Sheet -->
+                            <li>
+                                <a class="dropdown-item"
+                                href="{{ url_for('construction.view_balance_sheet') }}">
+                                    View Balance Sheet
+                                </a>
+                            </li>
+
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link fw-bold {% if request.endpoint == 'construction.reports' %}active{% endif %}"
+                        href="{{ url_for('construction.reports') }}">
+                            View
+                        </a>
+                    </li>
+
+
+                    {% endif %}
+
+
+
+                    <!-- LOGOUT -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+                    </li>
+
+                </ul>
+
+                <!-- RIGHT-SIDE TITLE + LOGO -->
+                <span class="navbar-text fw-bold text-white d-flex align-items-center">
+                    Construction
+                    <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
+                        alt="WVC Logo"
+                        style="height: 28px; width: auto; margin-left: 10px;">
+                </span>
+
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% block content %}
+        <h1>Welcome, {{ session.get('username', 'User') }}!</h1>
+        <p>Select a project to continue.</p>
+
+        <!-- List of Projects Card -->
+        <div class="card mt-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                List of Projects
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Project Site</th>
+                                <th>Status</th>
+                                <th>NTP Date</th>
+                                <th>Completion Date</th>
+                                <th>Duration (days)</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for project in projects %}
+                        <tr class="project-row"
+                            data-href="{{ url_for('construction.project_detail', project_id=project.id) }}">
+                            <td>{{ project.project_name }}</td>
+                            <td>{{ project.project_site }}</td>
+                            <td>{{ project.status }}</td>
+                            <td>{{ project.ntp_date.strftime('%Y-%m-%d') if project.ntp_date else '' }}</td>
+                            <td>{{ project.completion_date.strftime('%Y-%m-%d') if project.completion_date else '' }}</td>
+                            <td>{{ project.contract_duration }}</td>
+                            <td>{{ "{:,.2f}".format(project.contract_price) if project.contract_price else '' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No projects found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+    </div>
+
+
+    {% block scripts %}
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // Make project rows clickable without inline JS (avoids template-lint JS parsing issues)
+        document.querySelectorAll('.project-row').forEach(row => {
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', () => {
+                const href = row.dataset.href;
+                if (href) window.location.href = href;
+            });
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,318 @@
+{% extends "construction/reports.html" %}
+
+{% block reports_content %}
+<!-- Project Info Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Project Summary: {{ project.project_name }}</h3>
+            <a href="{{ url_for('construction.reports') }}" class="btn btn-light btn-sm">
+                ← Back to Reports
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <strong>Project Site:</strong> {{ project.project_site or 'N/A' }}
+            </div>
+            <div class="col-md-4">
+                <strong>Contractor:</strong> {{ project.contractor_name }}
+            </div>
+            <div class="col-md-4">
+                <strong>Status:</strong> <span class="badge bg-info">{{ project.status }}</span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <strong>NTP Date:</strong> {{ project.ntp_date.strftime('%d %b %Y') if project.ntp_date else 'N/A' }}
+            </div>
+            <div class="col-md-4">
+                <strong>Completion Date:</strong> {{ project.completion_date.strftime('%d %b %Y') if project.completion_date else 'N/A' }}
+            </div>
+            <div class="col-md-4">
+                <strong>Duration:</strong> {{ project.contract_duration }} days
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Balance Sheet and 3D Chart Row -->
+<div class="row">
+    <!-- Balance Sheet Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Financial Summary / Balance Sheet</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70%;">Item</th>
+                                <th style="width: 30%;" class="text-end">Amount (₱)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Revenue Section -->
+                            <tr class="table-info">
+                                <td><strong>REVENUE</strong></td>
+                                <td class="text-end"></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Contract Price</td>
+                                <td class="text-end">{{ "{:,.2f}".format(summary.contract_price) }}</td>
+                            </tr>
+                            
+                            <!-- Expenses Section -->
+                            <tr class="table-warning">
+                                <td><strong>EXPENSES</strong></td>
+                                <td class="text-end"></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Materials</td>
+                                <td class="text-end">{{ "{:,.2f}".format(summary.total_materials) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Labor</td>
+                                <td class="text-end">{{ "{:,.2f}".format(summary.total_labor) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Gasoline</td>
+                                <td class="text-end">{{ "{:,.2f}".format(summary.total_gasoline) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Documents</td>
+                                <td class="text-end">{{ "{:,.2f}".format(summary.total_documents) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Obligations</td>
+                                <td class="text-end">{{ "{:,.2f}".format(summary.total_obligations) }}</td>
+                            </tr>
+                            <tr class="table-secondary">
+                                <td class="ps-3"><strong>Total Expenses</strong></td>
+                                <td class="text-end"><strong>{{ "{:,.2f}".format(summary.total_expenses) }}</strong></td>
+                            </tr>
+                            
+                            <!-- Balance Section -->
+                            <tr class="{% if summary.balance >= 0 %}table-success{% else %}table-danger{% endif %}">
+                                <td><strong>BALANCE (Profit/Loss)</strong></td>
+                                <td class="text-end"><strong>{{ "{:,.2f}".format(summary.balance) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Additional Actions -->
+                <div class="mt-3 d-flex gap-2">
+                    <a href="{{ url_for('construction.project_detail', project_id=project.id) }}" class="btn btn-primary">
+                        View Project Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3D Visual Chart Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">3D Financial Visualization</h5>
+            </div>
+            <div class="card-body">
+                <div id="chart3d" style="width: 100%; height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Itemized Expenses Card -->
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Itemized Project Expenses</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description/Item</th>
+                        <th>Quantity</th>
+                        <th>Unit</th>
+                        <th>Unit Price</th>
+                        <th>Amount</th>
+                        <th>Invoice #</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                    {% if expense.expense_type != 'Activity' %}
+                    <tr>
+                        <td>{{ expense.expense_date.strftime('%d %b %Y') if expense.expense_date else 'N/A' }}</td>
+                        <td><span class="badge bg-secondary">{{ expense.expense_type }}</span></td>
+                        <td>
+                            {% if expense.expense_type == 'Materials' %}
+                                {{ expense.item or 'N/A' }}
+                            {% elif expense.expense_type == 'Labor' %}
+                                {% if expense.employee_name %}
+                                    {{ expense.employee_name }}
+                                {% elif expense.labor_id %}
+                                    Labor Entry
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            {% elif expense.expense_type == 'Gasoline' %}
+                                Gasoline
+                            {% elif expense.expense_type == 'Documents' %}
+                                {{ expense.document_ref or 'N/A' }}
+                            {% elif expense.expense_type == 'Obligation' %}
+                                {{ expense.obligation_ref or 'N/A' }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if expense.expense_type == 'Materials' %}
+                                {{ "{:,.3f}".format(expense.qty) if expense.qty else 'N/A' }}
+                            {% elif expense.expense_type == 'Labor' %}
+                                {{ "{:,.2f}".format(expense.days) if expense.days else 'N/A' }} days
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if expense.expense_type == 'Materials' %}
+                                {{ expense.unit or 'N/A' }}
+                            {% elif expense.expense_type == 'Labor' %}
+                                -
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if expense.expense_type == 'Materials' %}
+                                {{ "{:,.2f}".format(expense.unit_price) if expense.unit_price else 'N/A' }}
+                            {% elif expense.expense_type == 'Labor' %}
+                                {{ "{:,.2f}".format(expense.rate_per_day) if expense.rate_per_day else 'N/A' }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if expense.expense_type == 'Materials' %}
+                                {{ "{:,.2f}".format(expense.material_amount) if expense.material_amount else 'N/A' }}
+                            {% elif expense.expense_type == 'Labor' %}
+                                {{ "{:,.2f}".format(expense.labor_charge) if expense.labor_charge else 'N/A' }}
+                            {% elif expense.expense_type == 'Gasoline' %}
+                                {{ "{:,.2f}".format(expense.gasoline_amount) if expense.gasoline_amount else 'N/A' }}
+                            {% elif expense.expense_type == 'Documents' %}
+                                {{ "{:,.2f}".format(expense.document_amount) if expense.document_amount else 'N/A' }}
+                            {% elif expense.expense_type == 'Obligation' %}
+                                {{ "{:,.2f}".format(expense.obligation_amount) if expense.obligation_amount else 'N/A' }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ expense.invoice_number or '-' }}</td>
+                    </tr>
+                    {% endif %}
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">No expenses found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block reports_scripts %}
+<!-- Plotly.js for 3D charts -->
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prepare data for 3D chart
+        const categories = ['Revenue', 'Materials', 'Labor', 'Gasoline', 'Documents', 'Obligations'];
+        const amounts = [
+            {{ summary.contract_price }},
+            {{ summary.total_materials }},
+            {{ summary.total_labor }},
+            {{ summary.total_gasoline }},
+            {{ summary.total_documents }},
+            {{ summary.total_obligations }}
+        ];
+        
+        const colors = [
+            '#4ECDC4',  // Revenue - Teal
+            '#FF6B6B',  // Materials - Red
+            '#FFE66D',  // Labor - Yellow
+            '#95E1D3',  // Gasoline - Light Green
+            '#F38181',  // Documents - Pink
+            '#AA96DA'   // Obligations - Purple
+        ];
+
+        // Create 3D pie chart
+        const trace = {
+            type: 'pie',
+            labels: categories,
+            values: amounts,
+            marker: {
+                colors: colors,
+                line: {
+                    color: '#ffffff',
+                    width: 2
+                }
+            },
+            textinfo: 'label+percent',
+            textposition: 'outside',
+            hovertemplate: '<b>%{label}</b><br>₱%{value:,.2f}<br>%{percent}<extra></extra>',
+            hole: 0.4, // Creates a donut chart for better 3D effect
+            rotation: 45,
+            pull: [0.05, 0, 0, 0, 0, 0] // Slightly pull out the Revenue slice
+        };
+
+        const layout = {
+            title: {
+                text: 'Pie Chart',
+                font: { size: 18, color: '#333' },
+                x: 0,
+                xanchor: 'left'
+            },
+            margin: { l: 20, r: 20, t: 60, b: 20 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            legend: {
+                orientation: 'v',
+                x: 1.05,
+                y: 0.5,
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                bordercolor: 'rgba(0, 0, 0, 0.2)',
+                borderwidth: 1,
+                font: { size: 12 }
+            },
+            showlegend: true
+        };
+
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['pan2d', 'lasso2d'],
+            toImageButtonOptions: {
+                format: 'png',
+                filename: 'project_3d_chart',
+                height: 500,
+                width: 1000,
+                scale: 2
+            }
+        };
+
+        Plotly.newPlot('chart3d', [trace], layout, config);
+    });
+</script>
+{% endblock %}

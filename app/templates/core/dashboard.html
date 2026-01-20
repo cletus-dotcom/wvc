@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WVC</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
+    <style>
+        body {
+            padding-top: 50px;
+            background: url('{{ url_for('static', filename='images/base.png') }}') no-repeat center center fixed;
+            background-size: cover;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 20px auto;
+            max-width: 150px;
+        }
+        .dashboard-title {
+            text-align: center;
+            color: #fff;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.7);
+            margin-bottom: 40px;
+        }
+        .venture-card {
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+            min-height: 150px; /* uniform height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 15px;
+            background-color: rgba(255,255,255,0.2);
+            backdrop-filter: blur(8px);
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            width: 100%;
+        }
+        .venture-card:hover {
+            transform: scale(1.05);
+            background-color: rgba(255,255,255,0.3);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .venture-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+        .venture-description {
+            font-size: 0.9rem;
+        }
+        .row {
+            gap: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .dashboard-container {
+            padding: 30px;
+        }
+        /* Ensure equal height across all columns in a row */
+        .col-flex {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .navbar-brand img {
+            height: 32px;
+            width: 32px;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .menu-img {
+            height: 32px;
+            width: 32px;
+            transition: all 0.3s ease;
+            border-radius: 5px; /* optional for rounded corners */
+        }
+
+        .menu-btn:hover .menu-img {
+            border: 2px solid white;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.7);
+            transform: scale(1.1); /* optional slight zoom */
+        }
+
+        .venture-title {
+            font-family: "Berlin Sans FB", sans-serif;
+            text-transform: uppercase;
+        }
+
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark fixed-top shadow">
+    <div class="container-fluid d-flex align-items-center">
+
+        <!-- Hamburger Button on Left -->
+        <button class="btn p-0 me-3 menu-btn"
+                onclick="window.location.href='/auth/login';"
+                aria-label="Menu">
+            <img src="{{ url_for('static', filename='images/menu.png') }}"
+                alt="Menu"
+                class="menu-img">
+        </button>
+
+
+    </div>
+</nav>
+
+
+
+<div class="container dashboard-container">
+    <!-- Logo -->
+    <img src="{{ url_for('static', filename='images/wvc_logo.png') }}" alt="WVC Logo" class="logo">
+    
+    <!-- Title -->
+    <h1 class="dashboard-title">St. Michael Builders Corporation</h1>
+    
+    <!-- First Row: Construction -->
+    <div class="row mb-4">
+        {% set construction = ventures[0] %}
+        <div class="col-sm-6 col-md-4 col-flex mx-auto">
+            <div class="venture-card text-center p-4 {{ construction.color }}"
+                onclick="window.location.href='{{ url_for('core.go_construction') }}'">
+                
+                <div class="venture-icon">
+                    <i class="bi {{ construction.icon }}"></i>
+                </div>
+
+                <!-- Apply new class -->
+                <h3 class="venture-title">{{ construction.name }}</h3>
+
+                <p class="venture-description">{{ construction.description }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row: Carenderia & Catering -->
+    <div class="row">
+        {% for venture in ventures[1:] %}
+        <div class="col-sm-6 col-md-4 col-flex">
+            <div class="venture-card text-center p-4 {{ venture.color }}"
+                onclick="{% if venture.name == 'Carenderia' %}redirectToCarenderia(){% else %}redirectToLogin('{{ venture.url }}'){% endif %}">
+                
+                <div class="venture-icon">
+                    <i class="bi {{ venture.icon }}"></i>
+                </div>
+
+                <!-- Apply new class -->
+                <h3 class="venture-title">{{ venture.name }}</h3>
+
+                <p class="venture-description">{{ venture.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+    function redirectToLogin(targetUrl) {
+        const encoded = encodeURIComponent(targetUrl);
+        window.location.href = `/auth/login?next=${encoded}`;
+    }
+
+    function redirectToCarenderia() {
+        const isLoggedIn = {% if session.get('user_id') %}true{% else %}false{% endif %};
+        const userDepartment = {% if session.get('department') %}"{{ session.get('department') }}"{% else %}null{% endif %};
+        const carenderiaHomeUrl = "{{ url_for('carenderia.carenderia_home') }}";
+        const loginUrl = "{{ url_for('auth.login') }}";
+        const dashboardUrl = "{{ url_for('core.dashboard') }}";
+        
+        if (!isLoggedIn) {
+            // No user logged in - redirect to login, then to carenderia home after successful login
+            const encoded = encodeURIComponent(carenderiaHomeUrl);
+            window.location.href = loginUrl + "?next=" + encoded;
+        } else if (userDepartment && (userDepartment.toLowerCase() === 'carenderia' || userDepartment.toLowerCase() === 'corporate')) {
+            // User is logged in with Carenderia or Corporate department - go to carenderia home
+            window.location.href = carenderiaHomeUrl;
+        } else {
+            // User is logged in but NOT Carenderia or Corporate department - redirect to dashboard
+            window.location.href = dashboardUrl;
+        }
+    }
+</script>
+</body>
+</html>

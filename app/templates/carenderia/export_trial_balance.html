@@ -1,0 +1,55 @@
+{% extends "carenderia/home.html" %}
+
+{% block content %}
+<!-- Title Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Export Trial Balance</h3>
+            <a href="{{ url_for('carenderia.carenderia_home') }}" class="btn btn-light btn-sm">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Export Controls -->
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Select Month</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="exportMonth" class="form-label fw-bold">Month</label>
+                <input type="month" class="form-control" id="exportMonth" name="export_month" required>
+            </div>
+            <div class="col-md-8">
+                <button type="button" class="btn btn-success" id="exportPdfBtn">
+                    Export to PDF
+                </button>
+                <small class="text-muted d-block mt-2">
+                    Export range will be from the start of the selected month up to today’s date (or month-end for past months).
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.getElementById('exportPdfBtn').addEventListener('click', function () {
+        const month = document.getElementById('exportMonth').value;
+        if (!month) {
+            alert('Please select a month.');
+            return;
+        }
+        const url = `{{ url_for('carenderia.export_trial_balance_pdf') }}?month=${encodeURIComponent(month)}`;
+        // Open in a new tab so browser can download/view PDF
+        window.open(url, '_blank');
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,822 @@
+<!-- app/templates/catering/home.html -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catering Home</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+<style>
+    .dropdown-menu .dropdown-item:hover {
+        background-color: #d1e7dd !important;
+        color: #000 !important;
+    }
+
+    .dropdown-item.corporate-item:hover {
+        background-color: #ffc107;
+        color: #000 !important;
+    }
+
+    /* Highlight table row on hover */
+    .project-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .project-row:hover {
+        background-color: rgba(255, 193, 7, 0.12); /* subtle Bootstrap-warning tint */
+    }
+
+    /* Optional sticky table header */
+    thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 2;
+    }
+
+    /* override Bootstrap striped rows */
+    .table-striped > tbody > tr.project-row:hover > * {
+        background-color: rgba(255, 193, 7, 0.18) !important;
+    }
+
+    /* Navbar text color - dark gray */
+    .navbar .nav-link,
+    .navbar .navbar-text {
+        color: #333 !important;
+    }
+
+    .navbar .nav-link:hover {
+        color: #000 !important;
+    }
+
+
+</style>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-warning">
+        <div class="container-fluid">
+
+            <!-- LEFT MENU TOGGLER -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+
+                <!-- LEFT NAV ITEMS -->
+                <ul class="navbar-nav me-auto">
+
+                    <!-- HOME -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'core.dashboard' %}active{% endif %}"
+                        href="{{ url_for('core.dashboard') }}">
+                            SMBC
+                        </a>
+                    </li>
+
+                    <!-- SETTINGS -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold"
+                        href="#" role="button" data-bs-toggle="dropdown">
+                            Settings
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('catering.manage_bookings') }}">
+                                    Manage Bookings
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('catering.manage_menu') }}">
+                                    Manage Menu
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('catering.manage_equipment') }}">
+                                    Manage Equipment
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('catering.manage_employee') }}">
+                                    Manage Workers
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- CORPORATE (visible only for Corporate users or Admin role) -->
+                    {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold
+                            {% if request.endpoint in ['catering.view_wages', 'catering.view_balance_sheet'] %}active{% endif %}"
+                        href="#" id="corporateDropdown" role="button"
+                        data-bs-toggle="dropdown">
+                            Corporate
+                        </a>
+
+                        <ul class="dropdown-menu" aria-labelledby="corporateDropdown">
+                            <!-- View Wages -->
+                            <li>
+                                <a class="dropdown-item"
+                                href="{{ url_for('catering.view_wages') }}">
+                                    View Wages
+                                </a>
+                            </li>
+                            <!-- View Balance Sheet -->
+                            <li>
+                                <a class="dropdown-item"
+                                href="{{ url_for('catering.view_balance_sheet') }}">
+                                    View Balance Sheet
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    {% endif %}
+
+
+
+                    <!-- LOGOUT -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+                    </li>
+
+                </ul>
+
+                <!-- RIGHT-SIDE TITLE + LOGO -->
+                <span class="navbar-text fw-bold text-dark d-flex align-items-center">
+                    Catering
+                    <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
+                        alt="WVC Logo"
+                        style="height: 28px; width: auto; margin-left: 10px;">
+                </span>
+
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% block content %}
+        <!-- Welcome Alert Card -->
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <h4 class="alert-heading mb-2">Welcome, {{ session.get('username', 'User') }}!</h4>
+            <p class="mb-0">Catering Department Dashboard</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <!-- Expense Cards -->
+        <div class="row mt-3">
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 expense-card" style="cursor: pointer; transition: transform 0.2s;" data-expense-type="Wages" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-3">
+                            <i class="bi bi-cash-stack" style="font-size: 2rem; color: #ffc107;"></i>
+                        </h5>
+                        <h4 class="mb-2">Wages</h4>
+                        <p class="text-muted mb-0">Enter employee wages</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 expense-card" style="cursor: pointer; transition: transform 0.2s;" data-expense-type="Expenses" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-3">
+                            <i class="bi bi-receipt" style="font-size: 2rem; color: #198754;"></i>
+                        </h5>
+                        <h4 class="mb-2">Expenses</h4>
+                        <p class="text-muted mb-0">Enter operational expenses</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 expense-card" style="cursor: pointer; transition: transform 0.2s;" data-expense-type="Miscellaneous" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-3">
+                            <i class="bi bi-piggy-bank" style="font-size: 2rem; color: #0d6efd;"></i>
+                        </h5>
+                        <h4 class="mb-2">Miscellaneous</h4>
+                        <p class="text-muted mb-0">Enter miscellaneous expenses</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmed Bookings List -->
+        <div class="card mt-4 shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                Confirmed Bookings
+            </div>
+            <div class="card-body">
+                {% if confirmed_bookings %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px;">ID</th>
+                                <th>Customer</th>
+                                <th>Event Date</th>
+                                <th>Event Time</th>
+                                <th>Items Requested</th>
+                                <th>Contact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for booking in confirmed_bookings %}
+                            <tr class="booking-row" style="cursor: pointer;" 
+                                data-booking-id="{{ booking.id }}"
+                                data-booking-name="{{ booking.requestor_name }}"
+                                data-booking-items="{{ booking.items_requested }}">
+                                <td>{{ booking.id }}</td>
+                                <td>
+                                    <div class="fw-bold">{{ booking.requestor_name }}</div>
+                                    {% if booking.customer_address %}
+                                    <div class="text-muted" style="font-size: 0.85rem;">{{ booking.customer_address }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ booking.event_date.strftime('%b %d, %Y') if booking.event_date else '' }}</td>
+                                <td>{{ booking.event_time.strftime('%I:%M %p') if booking.event_time else '' }}</td>
+                                <td style="white-space: pre-line; font-size: 0.9rem;">{{ booking.items_requested }}</td>
+                                <td>
+                                    {% if booking.contact_number %}
+                                    <div>{{ booking.contact_number }}</div>
+                                    {% endif %}
+                                    {% if booking.email_address %}
+                                    <div class="text-muted" style="font-size: 0.85rem;">{{ booking.email_address }}</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="card-text text-muted text-center mb-0">No confirmed bookings at this time.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endblock %}
+    </div>
+
+
+    <!-- Expense Modal -->
+    <div class="modal fade" id="expenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="expenseForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="expenseModalTitle">Add Expense</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="expense_type" id="expenseType">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Date</label>
+                            <input type="date" name="date" class="form-control" id="expenseDate" required>
+                        </div>
+
+                        <div class="mb-3" id="wagesEmployeeSection" style="display: none;">
+                            <label class="form-label fw-bold">Employee</label>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <select class="form-select" id="expenseEmployeeId">
+                                        <option value="">Select Employee</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-warning btn-sm w-100" id="addEmployeeBtn">Add Employee</button>
+                                </div>
+                            </div>
+                            <input type="hidden" name="employee_name" id="expenseEmployeeName">
+                            
+                            <div class="mt-2 mb-2">
+                                <label class="form-label fw-bold">Rate per Day</label>
+                                <input type="text" class="form-control" id="expenseEmployeeRate" readonly>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <label class="form-label fw-bold">Number of Days</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="expenseNumberOfDays">
+                            </div>
+                            
+                            <div class="mb-2">
+                                <label class="form-label fw-bold">Amount</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="expenseEmployeeAmount" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Employee Wages</label>
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <select multiple class="form-control" id="employeeWagesList" size="5" style="height: 150px;">
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger btn-sm w-100" id="deleteEmployeeBtn" style="height: 100%;" disabled>
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Total Wages Amount</label>
+                                <input type="text" class="form-control fw-bold" id="totalWagesAmount" readonly value="₱0.00">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Description</label>
+                            <input type="text" name="description" class="form-control" id="expenseDescription">
+                        </div>
+
+                        <div class="mb-3" id="regularAmountSection">
+                            <label class="form-label fw-bold">Amount</label>
+                            <input type="number" step="0.01" min="0" name="amount" class="form-control" id="expenseAmount" required>
+                        </div>
+
+                        <div class="mb-3" id="remarksSection">
+                            <label class="form-label fw-bold">Remarks</label>
+                            <textarea name="remarks" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning btn-sm">Save Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div class="modal fade" id="addTransactionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="addTransactionForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Financial Transaction</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="booking_id" id="transactionBookingId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Date</label>
+                            <input type="date" name="date" class="form-control" id="transactionDate" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Booking</label>
+                            <input type="text" class="form-control" id="transactionBookingName" readonly>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Booking Amount</label>
+                                <input type="text" name="booking_amount" class="form-control" id="transactionBookingAmount" readonly required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Running Balance</label>
+                                <input type="text" class="form-control" id="transactionRunningBalance" readonly>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Transaction Description</label>
+                            <select name="trans_description" class="form-select" id="transactionDescription" required>
+                                <option value="">Select Payment Type</option>
+                                <option value="Down Payment">Down Payment</option>
+                                <option value="Partial Payment">Partial Payment</option>
+                                <option value="Full Payment">Full Payment</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Transaction Amount</label>
+                            <input type="number" step="0.01" name="trans_amount" class="form-control" id="transactionAmount" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Remarks</label>
+                            <textarea name="remarks" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning btn-sm">Save Transaction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% block scripts %}
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script>
+        // Expense Cards functionality
+        document.querySelectorAll('.expense-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Load employees for wages
+        let cateringEmployees = [];
+        fetch('{{ url_for("catering.catering_employees") }}')
+            .then(res => res.json())
+            .then(data => {
+                cateringEmployees = data.employees || [];
+                const select = document.getElementById('expenseEmployeeId');
+                select.innerHTML = '<option value="">Select Employee</option>';
+                cateringEmployees.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp.id;
+                    option.textContent = emp.name + (emp.role ? ` (${emp.role})` : '');
+                    option.dataset.rate = emp.rate_per_day || '';
+                    select.appendChild(option);
+                });
+            });
+
+        // Store wages entries
+        let wagesEntries = [];
+
+        // Handle expense card click
+        document.getElementById('expenseModal').addEventListener('show.bs.modal', function(event) {
+            const card = event.relatedTarget;
+            const expenseType = card.dataset.expenseType;
+            document.getElementById('expenseType').value = expenseType;
+            document.getElementById('expenseModalTitle').textContent = `Add ${expenseType}`;
+            
+            // Show/hide sections based on expense type
+            const wagesSection = document.getElementById('wagesEmployeeSection');
+            const regularAmountSection = document.getElementById('regularAmountSection');
+            const remarksSection = document.getElementById('remarksSection');
+            const descriptionInput = document.getElementById('expenseDescription');
+            
+            if (expenseType === 'Wages') {
+                wagesSection.style.display = 'block';
+                regularAmountSection.style.display = 'none';
+                remarksSection.style.display = 'none';
+                descriptionInput.value = 'Wages';
+                descriptionInput.readOnly = true;
+                wagesEntries = []; // Reset wages entries
+                document.getElementById('employeeWagesList').innerHTML = '';
+                document.getElementById('expenseAmount').value = '0.00';
+                document.getElementById('totalWagesAmount').value = '₱0.00';
+            } else {
+                wagesSection.style.display = 'none';
+                regularAmountSection.style.display = 'block';
+                remarksSection.style.display = 'block';
+                descriptionInput.value = '';
+                descriptionInput.readOnly = false;
+            }
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expenseDate').value = today;
+        });
+
+        // Update employee rate and calculate amount when employee is selected
+        document.getElementById('expenseEmployeeId').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const rate = parseFloat(selectedOption.dataset.rate) || 0;
+            document.getElementById('expenseEmployeeRate').value = rate.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('expenseEmployeeName').value = selectedOption.textContent.split(' (')[0] || '';
+            calculateWageAmount();
+        });
+
+        // Calculate wage amount when number of days changes
+        document.getElementById('expenseNumberOfDays').addEventListener('input', calculateWageAmount);
+        document.getElementById('expenseNumberOfDays').addEventListener('change', calculateWageAmount);
+
+        function calculateWageAmount() {
+            const rate = parseFloat(document.getElementById('expenseEmployeeRate').value.replace(/,/g, '')) || 0;
+            const days = parseFloat(document.getElementById('expenseNumberOfDays').value) || 0;
+            const amount = rate * days;
+            document.getElementById('expenseEmployeeAmount').value = amount.toFixed(2);
+        }
+
+        // Add employee to wages list
+        document.getElementById('addEmployeeBtn').addEventListener('click', function() {
+            const employeeSelect = document.getElementById('expenseEmployeeId');
+            const selectedOption = employeeSelect.options[employeeSelect.selectedIndex];
+            
+            if (!selectedOption.value) {
+                alert('Please select an employee.');
+                return;
+            }
+            
+            const employeeId = selectedOption.value;
+            const employeeName = document.getElementById('expenseEmployeeName').value;
+            const rate = parseFloat(document.getElementById('expenseEmployeeRate').value.replace(/,/g, '')) || 0;
+            const days = parseFloat(document.getElementById('expenseNumberOfDays').value) || 0;
+            const amount = parseFloat(document.getElementById('expenseEmployeeAmount').value) || 0;
+            
+            if (days <= 0) {
+                alert('Please enter a valid number of days.');
+                return;
+            }
+            
+            // Check if employee already added
+            if (wagesEntries.find(entry => entry.employee_id === employeeId)) {
+                alert('This employee is already in the list.');
+                return;
+            }
+            
+            // Add to wages entries
+            wagesEntries.push({
+                employee_id: employeeId,
+                employee_name: employeeName,
+                rate_per_day: rate,
+                number_of_days: days,
+                amount: amount
+            });
+            
+            // Add to list box
+            const listBox = document.getElementById('employeeWagesList');
+            const option = document.createElement('option');
+            option.value = employeeId;
+            option.textContent = `${employeeName} - ${days} day(s) x ₱${rate.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} = ₱${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            option.dataset.index = wagesEntries.length - 1;
+            listBox.appendChild(option);
+            
+            // Clear fields
+            employeeSelect.value = '';
+            document.getElementById('expenseEmployeeRate').value = '';
+            document.getElementById('expenseNumberOfDays').value = '';
+            document.getElementById('expenseEmployeeAmount').value = '';
+            
+            // Calculate total amount
+            updateTotalWagesAmount();
+        });
+
+        // Enable/disable Delete button based on selection
+        document.getElementById('employeeWagesList').addEventListener('change', function() {
+            const deleteBtn = document.getElementById('deleteEmployeeBtn');
+            deleteBtn.disabled = this.selectedIndex < 0;
+        });
+
+        // Remove employee from wages list (Delete button)
+        document.getElementById('deleteEmployeeBtn').addEventListener('click', function() {
+            const listBox = document.getElementById('employeeWagesList');
+            const selectedIndex = listBox.selectedIndex;
+            
+            if (selectedIndex >= 0) {
+                const option = listBox.options[selectedIndex];
+                const entryIndex = parseInt(option.dataset.index);
+                
+                // Remove from wages entries array
+                wagesEntries.splice(entryIndex, 1);
+                
+                // Remove from list box
+                listBox.remove(selectedIndex);
+                
+                // Re-index remaining options
+                Array.from(listBox.options).forEach((opt, idx) => {
+                    opt.dataset.index = idx;
+                });
+                
+                // Disable delete button if no items left
+                if (listBox.options.length === 0) {
+                    this.disabled = true;
+                }
+                
+                updateTotalWagesAmount();
+            }
+        });
+
+        // Keep double-click functionality as well
+        document.getElementById('employeeWagesList').addEventListener('dblclick', function() {
+            document.getElementById('deleteEmployeeBtn').click();
+        });
+
+        function updateTotalWagesAmount() {
+            const total = wagesEntries.reduce((sum, entry) => sum + entry.amount, 0);
+            document.getElementById('expenseAmount').value = total.toFixed(2);
+            // Update the visible Total Wages Amount field
+            document.getElementById('totalWagesAmount').value = `₱${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        // Handle expense form submission
+        document.getElementById('expenseForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const expenseType = document.getElementById('expenseType').value;
+            
+            // For Wages, submit to catering_wages table
+            if (expenseType === 'Wages') {
+                if (wagesEntries.length === 0) {
+                    alert('Please add at least one employee to the wages list.');
+                    return;
+                }
+                
+                const date = document.getElementById('expenseDate').value;
+                const description = document.getElementById('expenseDescription').value;
+                
+                // Prepare wages data
+                const wagesData = {
+                    date: date,
+                    description: description,
+                    wages: wagesEntries.map(entry => ({
+                        employee_id: entry.employee_id,
+                        employee_name: entry.employee_name,
+                        rate_per_day: entry.rate_per_day,
+                        number_of_days: entry.number_of_days,
+                        amount: entry.amount
+                    }))
+                };
+                
+                // Submit all wages at once
+                fetch('{{ url_for("catering.add_wages") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(wagesData)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success){
+                        alert(data.message || `Successfully added ${wagesEntries.length} wage entry/entries!`);
+                        bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+                        this.reset();
+                        wagesEntries = [];
+                        document.getElementById('employeeWagesList').innerHTML = '';
+                        document.getElementById('expenseAmount').value = '0.00';
+                        document.getElementById('totalWagesAmount').value = '₱0.00';
+                    } else {
+                        alert(data.error || 'Failed to add wages.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the wages.');
+                });
+            } else {
+                // For Expenses and Miscellaneous, submit normally
+                const formData = new FormData(this);
+                
+                fetch('{{ url_for("catering.add_expense") }}', {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success){
+                        alert('Expense added successfully!');
+                        bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+                        this.reset();
+                    } else {
+                        alert(data.error || 'Failed to add expense.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the expense.');
+                });
+            }
+        });
+    </script>
+    <script>
+        // Extract booking amount from items_requested text
+        function extractBookingAmount(itemsText) {
+            if (!itemsText) return 0;
+            // Look for "TOTAL AMOUNT: ₱X,XXX.XX" pattern
+            const match = itemsText.match(/TOTAL AMOUNT:\s*₱([\d,]+\.?\d*)/);
+            if (match) {
+                return parseFloat(match[1].replace(/,/g, '')) || 0;
+            }
+            return 0;
+        }
+
+        // Track current booking totals
+        let currentBookingAmount = 0;
+        let currentExistingTotal = 0;
+
+        // Make table rows clickable
+        document.querySelectorAll('.booking-row').forEach(row => {
+            row.addEventListener('click', function() {
+                const bookingId = this.dataset.bookingId;
+                const bookingName = this.dataset.bookingName;
+                const bookingItems = this.dataset.bookingItems;
+                
+                // Set modal values
+                document.getElementById('transactionBookingId').value = bookingId;
+                document.getElementById('transactionBookingName').value = `Booking #${bookingId} - ${bookingName}`;
+                const bookingAmount = extractBookingAmount(bookingItems);
+                currentBookingAmount = bookingAmount;
+
+                // Format with comma and 2 decimal places
+                document.getElementById('transactionBookingAmount').value = bookingAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                // Fetch existing total transactions for this booking, then update running balance
+                fetch(`/catering/booking-transaction-total/${bookingId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        currentExistingTotal = data.success ? (parseFloat(data.total) || 0) : 0;
+                        updateRunningBalance();
+                    })
+                    .catch(() => {
+                        currentExistingTotal = 0;
+                        updateRunningBalance();
+                    });
+                
+                // Set today's date as default
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('transactionDate').value = today;
+                
+                // Show modal
+                new bootstrap.Modal(document.getElementById('addTransactionModal')).show();
+            });
+            
+            // Add hover effect
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+            });
+        });
+
+        // Function to calculate and update running balance
+        function updateRunningBalance() {
+            const transAmountInput = document.getElementById('transactionAmount');
+            const runningBalanceInput = document.getElementById('transactionRunningBalance');
+            
+            const transAmount = parseFloat(transAmountInput.value) || 0;
+            const runningBalance = currentBookingAmount - currentExistingTotal - transAmount;
+            
+            // Format with comma and 2 decimal places
+            runningBalanceInput.value = runningBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        // Update running balance when transaction amount changes
+        const transAmountInput = document.getElementById('transactionAmount');
+        transAmountInput.addEventListener('input', updateRunningBalance);
+        transAmountInput.addEventListener('change', updateRunningBalance);
+        
+        // Auto-fill transaction amount when "Full Payment" is selected
+        document.getElementById('transactionDescription').addEventListener('change', function() {
+            if (this.value === 'Full Payment') {
+                // Calculate running balance without current transaction amount
+                const runningBalance = currentBookingAmount - currentExistingTotal;
+                
+                // Set transaction amount to the running balance
+                transAmountInput.value = runningBalance.toFixed(2);
+                updateRunningBalance();
+            }
+        });
+
+        // Handle transaction form submission
+        document.getElementById('addTransactionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Convert formatted booking amount back to number for submission
+            const bookingAmountInput = document.getElementById('transactionBookingAmount');
+            const bookingAmountValue = bookingAmountInput.value.replace(/,/g, '');
+            bookingAmountInput.value = bookingAmountValue;
+            
+            const formData = new FormData(this);
+
+            fetch('{{ url_for("catering.add_transaction") }}', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    let message = 'Transaction added successfully!';
+                    if(data.booking_status_updated) {
+                        message += ' Booking status updated to Completed.';
+                    }
+                    alert(message);
+                    bootstrap.Modal.getInstance(document.getElementById('addTransactionModal')).hide();
+                    this.reset();
+                    // Reload page to refresh the bookings list
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to add transaction.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while adding the transaction.');
+            });
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

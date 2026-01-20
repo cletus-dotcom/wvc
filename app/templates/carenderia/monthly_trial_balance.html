@@ -1,0 +1,294 @@
+{% extends "carenderia/home.html" %}
+
+{% block content %}
+<!-- Title Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Monthly Trial Balance Sheet</h3>
+            <a href="{{ url_for('carenderia.carenderia_home') }}" class="btn btn-light btn-sm">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Month Filter Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Filter by Month</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="filterMonth" class="form-label fw-bold">Select Month</label>
+                <input type="month" class="form-control" id="filterMonth" name="filter_month">
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-success" id="loadMonthBtn">Load Month</button>
+                <button type="button" class="btn btn-secondary" id="clearFilterBtn">Clear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Summary Card -->
+<div class="card shadow-sm mb-4" id="monthlySummaryCard" style="display: none;">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Monthly Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-3">
+                    <span class="fw-bold fs-6">Total Daily Collection</span>
+                    <span class="fw-bold fs-6" id="monthlyTotalCollection">0.00</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-3">
+                    <span class="fw-bold fs-6">Total Deductions</span>
+                    <span class="fw-bold fs-6" id="monthlyTotalDeductions">0.00</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between align-items-center p-3 bg-warning text-dark rounded mb-3">
+                    <span class="fw-bold fs-6">Net Amount</span>
+                    <span class="fw-bold fs-6" id="monthlyNetAmount">0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Details Accordion Card -->
+<div class="card shadow-sm" id="dailyDetailsCard" style="display: none;">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Daily Details</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="accordion" id="dailyAccordion">
+            <!-- Accordion items will be populated here -->
+        </div>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div class="card shadow-sm" id="emptyStateCard">
+    <div class="card-body text-center py-5">
+        <p class="text-muted mb-0">Select a month and click "Load Month" to view the trial balance sheet.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let monthlyData = {};
+
+    // Helper function to format numbers with commas
+    function formatAmount(num) {
+        return parseFloat(num || 0).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // Format date to "19 Dec 2025" format
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    }
+
+    // Load transactions for selected month
+    document.getElementById('loadMonthBtn').addEventListener('click', async function() {
+        const filterMonth = document.getElementById('filterMonth').value;
+        
+        if (!filterMonth) {
+            alert('Please select a month.');
+            return;
+        }
+
+        try {
+            const resp = await fetch(`{{ url_for("carenderia.get_transactions_by_month") }}?month=${filterMonth}`);
+            const data = await resp.json();
+            
+            if (resp.ok && data.success) {
+                monthlyData = data.monthly_data || {};
+                updateMonthlySummary();
+                updateDailyAccordion();
+                document.getElementById('monthlySummaryCard').style.display = '';
+                document.getElementById('dailyDetailsCard').style.display = '';
+                document.getElementById('emptyStateCard').style.display = 'none';
+            } else {
+                alert(data.error || 'Failed to load transactions.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error loading transactions. Please try again.');
+        }
+    });
+
+    // Clear filter
+    document.getElementById('clearFilterBtn').addEventListener('click', function() {
+        document.getElementById('filterMonth').value = '';
+        monthlyData = {};
+        document.getElementById('monthlySummaryCard').style.display = 'none';
+        document.getElementById('dailyDetailsCard').style.display = 'none';
+        document.getElementById('emptyStateCard').style.display = '';
+    });
+
+    // Update monthly summary
+    function updateMonthlySummary() {
+        let totalCollection = 0;
+        let totalDeductions = 0;
+
+        Object.keys(monthlyData).forEach(date => {
+            const dayData = monthlyData[date];
+            totalCollection += parseFloat(dayData.daily_collection || 0);
+            totalDeductions += parseFloat(dayData.total_deductions || 0);
+        });
+
+        const netAmount = totalCollection - totalDeductions;
+
+        document.getElementById('monthlyTotalCollection').textContent = formatAmount(totalCollection);
+        document.getElementById('monthlyTotalDeductions').textContent = formatAmount(totalDeductions);
+        document.getElementById('monthlyNetAmount').textContent = formatAmount(netAmount);
+    }
+
+    // Update daily accordion
+    function updateDailyAccordion() {
+        const accordion = document.getElementById('dailyAccordion');
+        accordion.innerHTML = '';
+
+        // Sort dates in descending order (newest first)
+        const sortedDates = Object.keys(monthlyData).sort((a, b) => new Date(b) - new Date(a));
+
+        sortedDates.forEach((date, index) => {
+            const dayData = monthlyData[date];
+            const accordionId = `accordion-${date.replace(/-/g, '')}`;
+            const collapseId = `collapse-${date.replace(/-/g, '')}`;
+            const isFirst = index === 0;
+
+            const accordionItem = document.createElement('div');
+            accordionItem.className = 'accordion-item';
+            accordionItem.innerHTML = `
+                <h2 class="accordion-header" id="heading-${accordionId}">
+                    <button class="accordion-button ${isFirst ? '' : 'collapsed'}" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
+                            aria-expanded="${isFirst ? 'true' : 'false'}" 
+                            aria-controls="${collapseId}">
+                        <div class="d-flex justify-content-between w-100 me-3">
+                            <span class="fw-bold">${formatDate(date)}</span>
+                            <span class="fw-bold text-end ms-3">
+                                Net: ${formatAmount(parseFloat(dayData.net_amount || 0))}
+                            </span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="${collapseId}" class="accordion-collapse collapse ${isFirst ? 'show' : ''}" 
+                     aria-labelledby="heading-${accordionId}" data-bs-parent="#dailyAccordion">
+                    <div class="accordion-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded mb-2">
+                                    <span class="fw-bold">Daily Collection</span>
+                                    <span class="fw-bold">${formatAmount(parseFloat(dayData.daily_collection || 0))}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-warning text-dark rounded mb-2">
+                                    <span class="fw-bold">Net Amount</span>
+                                    <span class="fw-bold">${formatAmount(parseFloat(dayData.net_amount || 0))}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-2">Deductions:</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <tbody>
+                                            ${getDeductionRows(dayData)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-2">Transactions:</h6>
+                                <div class="table-responsive" style="max-height: 300px;">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead style="position: sticky; top: 0; background-color: #d1e7dd; z-index: 10;">
+                                            <tr>
+                                                <th style="background-color: #d1e7dd;">Type</th>
+                                                <th style="background-color: #d1e7dd;">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${getTransactionRows(dayData.transactions || [])}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            accordion.appendChild(accordionItem);
+        });
+    }
+
+    // Get deduction rows HTML
+    function getDeductionRows(dayData) {
+        const deductions = [
+            { key: 'wages', label: 'Wages' },
+            { key: 'electric_bill', label: 'Electric Bill' },
+            { key: 'water_bill', label: 'Water Bill' },
+            { key: 'maintenance', label: 'Maintenance' },
+            { key: 'mayors_permit', label: "Mayor's Permit" },
+            { key: 'rental', label: 'Rental' },
+            { key: 'bir', label: 'BIR' },
+            { key: 'sss', label: 'SSS' },
+            { key: 'pag_ibig', label: 'PAG-IBIG' },
+            { key: 'purchases', label: 'Purchases' }
+        ];
+
+        let rows = '';
+        deductions.forEach(ded => {
+            const amount = parseFloat(dayData[ded.key] || 0);
+            if (amount > 0) {
+                rows += `
+                    <tr>
+                        <td class="fw-bold">${ded.label}</td>
+                        <td class="text-end">${formatAmount(amount)}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        rows += `
+            <tr class="table-secondary">
+                <td class="fw-bold">Total Deductions</td>
+                <td class="text-end fw-bold">${formatAmount(parseFloat(dayData.total_deductions || 0))}</td>
+            </tr>
+        `;
+
+        return rows;
+    }
+
+    // Get transaction rows HTML
+    function getTransactionRows(transactions) {
+        if (transactions.length === 0) {
+            return '<tr><td colspan="2" class="text-center text-muted py-2">No transactions</td></tr>';
+        }
+
+        return transactions.map(trans => `
+            <tr>
+                <td>${trans.trans_type || ''}</td>
+                <td class="text-end fw-bold">${formatAmount(parseFloat(trans.amount || 0))}</td>
+            </tr>
+        `).join('');
+    }
+</script>
+{% endblock %}
