@@ -219,8 +219,18 @@ python create_admin.py
 
 ---
 
+## Deployment
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for a step-by-step guide to deploy this app to **Render + Supabase** (free tier for testing, or paid for production).
+
+Quick summary:
+- **Render** hosts the Flask web service
+- **Supabase** provides the PostgreSQL database
+- Estimated cost for small usage: **~$400-500/year** (paid plans) or **$0** (free tier with limitations)
+
+---
+
 ## Notes / Known Gaps
 
-- There is currently **no checked-in `requirements.txt`** or `pyproject.toml`. For production deployments, add pinned dependencies.
 - The repository currently includes a `venv/` folder; typically you would exclude this from version control and rebuild it locally.
 
