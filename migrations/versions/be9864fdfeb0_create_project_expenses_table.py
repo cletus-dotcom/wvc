@@ -22,16 +22,16 @@ def upgrade():
     # Check if table exists before creating it
     connection = op.get_bind()
     
-    check_table_sql = sa.text("""
+    # Check if table exists
+    check_result = connection.execute(sa.text("""
         SELECT EXISTS (
             SELECT 1 
             FROM information_schema.tables 
             WHERE table_schema = 'public' 
             AND table_name = 'project_expenses'
         )
-    """)
-    result = connection.execute(check_table_sql)
-    table_exists = result.scalar()
+    """))
+    table_exists = check_result.scalar()
     
     if not table_exists:
         # Table doesn't exist, create it
@@ -56,7 +56,7 @@ def upgrade():
         sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
         sa.PrimaryKeyConstraint('id')
         )
-    # else: table already exists, skip creation
+    # else: table already exists (created in migration 3e6d4d93bf85), skip creation
     # ### end Alembic commands ###
 
 
