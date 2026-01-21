@@ -49,11 +49,33 @@ def upgrade():
                    existing_type=sa.INTEGER(),
                    nullable=False)
 
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.alter_column('department',
-               existing_type=sa.VARCHAR(length=150),
-               type_=sa.String(length=100),
-               existing_nullable=True)
+    # Fix: department column may not exist in users table
+    # Check if department column exists
+    check_department_sql = sa.text("""
+        SELECT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'users' 
+            AND column_name = 'department'
+        )
+    """)
+    result = connection.execute(check_department_sql)
+    department_exists = result.scalar()
+    
+    if not department_exists:
+        # Column doesn't exist, add it with correct type (VARCHAR(100))
+        op.execute("""
+            ALTER TABLE users 
+            ADD COLUMN department VARCHAR(100) DEFAULT 'Construction'
+        """)
+    else:
+        # Column exists, alter it to change from VARCHAR(150) to VARCHAR(100)
+        with op.batch_alter_table('users', schema=None) as batch_op:
+            batch_op.alter_column('department',
+                   existing_type=sa.VARCHAR(length=150),
+                   type_=sa.String(length=100),
+                   existing_nullable=True)
 
     # ### end Alembic commands ###
 
