@@ -791,41 +791,44 @@ Same troubleshooting as above - check `DATABASE_URL` is set in Environment tab f
 - Make sure you're using the password you set when creating the Supabase project
 - Special characters in passwords might need to be URL-encoded (e.g., `!` becomes `%21`)
 
-### Error: "Exited with status 1" or "Pre-deploy has failed"
+### Error: "Exited with status 1 while running your pre-deploy script" or "Pre-deploy has failed"
 
-**This error means your Release Command (`flask db upgrade`) failed.**
+This means your **Pre-Deploy Command** (or **Release Command**) failed—usually `flask db upgrade`. Render does not show the real error on the summary; you must open the logs to see it.
 
-**Check the deployment logs** (Render Dashboard → Logs tab) to see the exact error. Common causes:
+**Step 1 – See the actual error**
 
-1. **"No application found" or "Could not locate a Flask application"**:
-   - **Fix**: Add `FLASK_APP=run:app` to Environment variables
-   - Go to Environment tab → Add Environment Variable → Key: `FLASK_APP`, Value: `run:app`
+1. In Render, open your **Web Service** (e.g. wvc-app).
+2. Go to the **"Logs"** tab (or **"Events"** / **"Deploys"**).
+3. Click the **failed deploy** (e.g. "Sync local changes 02.05.2026").
+4. In the deploy log, find the **"Pre-deploy"** or **"Release"** step and **expand it** (click to show full output).
+5. Scroll until you see a **Python traceback** or an error line (e.g. `psycopg2.errors...`, `ModuleNotFoundError`, `No application found`). That line is the real cause.
 
-2. **"Network is unreachable"** (see troubleshooting above):
-   - **Fix**: Check `DATABASE_URL` is set correctly in Environment variables
-   - Verify Supabase project is not paused
+**Step 2 – Fix according to the message**
 
-3. **"ModuleNotFoundError" or import errors**:
-   - **Fix**: Make sure all dependencies are in `requirements.txt`
-   - Check Build Command is: `pip install -r requirements.txt`
+| If you see… | What to do |
+|--------------|------------|
+| **"No application found"** / **"Could not locate a Flask application"** | Add env var: `FLASK_APP` = `run:app` (Environment tab). |
+| **"Network is unreachable"** / **"could not translate host name"** | Set `DATABASE_URL` to your Supabase **Connection pooler (Session mode)** URI. Wake the project if it’s paused. |
+| **"relation … does not exist"** / **"UndefinedTable"** | DB is empty or migrations didn’t run. Ensure Pre-Deploy is `export FLASK_APP=run:app && flask db upgrade` and that `DATABASE_URL` is correct. |
+| **"relation … already exists"** / **"DuplicateTable"** / **"column … already exists"** | Migrations are not idempotent. See migration troubleshooting in this doc (make migrations skip if table/column exists). |
+| **"password authentication failed"** | Fix `DATABASE_URL`: correct password, and URL-encode special characters (e.g. `!` → `%21`). |
+| **"ModuleNotFoundError"** / **ImportError** | Add the missing package to `requirements.txt` and redeploy. |
 
-4. **"OperationalError" or database connection errors**:
-   - **Fix**: Verify `DATABASE_URL` format is correct (no brackets, actual password)
-   - Try using Supabase Connection Pooler (see troubleshooting above)
+**Step 3 – Optional: deploy without pre-deploy (temporary)**
 
-**Quick Diagnostic Checklist:**
+If you need the app live while you fix the pre-deploy error:
 
-Before deploying, verify in Render → Environment tab:
-- ✅ `DATABASE_URL` exists and has correct format (no `[PASSWORD]` placeholder)
-- ✅ `FLASK_APP=run:app` is set
-- ✅ `SECRET_KEY` is set (any random string)
-- ✅ No extra spaces or quotes around values
+1. **Settings** → **Build & Deploy** (or **Build Pipeline**).
+2. **Clear the Pre-Deploy Command** (leave it empty) → Save.
+3. **Manual Deploy** → Deploy. The app may start (but DB might be missing tables if migrations never ran).
+4. Run migrations from your machine (with `DATABASE_URL` set to Supabase), or fix the error from Step 2, re-add the Pre-Deploy Command, and redeploy.
 
-**To see detailed error logs:**
-1. Go to Render Dashboard → Your Service → **"Logs"** tab
-2. Scroll to the "Release phase" section
-3. Look for the actual error message (usually in red)
-4. Match it to one of the errors above
+**Quick checklist (Environment tab)**
+
+- `DATABASE_URL` set (Supabase URI, no `[PASSWORD]` placeholder).
+- `FLASK_APP` = `run:app`.
+- `SECRET_KEY` set (any random string).
+- No stray spaces or quotes in values.
 
 ---
 

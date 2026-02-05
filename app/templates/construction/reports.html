@@ -1,6 +1,11 @@
 {% extends "construction/home.html" %}
 
 {% block content %}
+<!-- Back to dashboard -->
+<div class="mb-3">
+    <a href="{{ url_for('construction.construction_home') }}" class="btn btn-outline-secondary btn-sm">&larr; Back to dashboard</a>
+</div>
+
 <!-- Title Card -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-primary text-white">

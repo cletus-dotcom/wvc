@@ -472,6 +472,8 @@ def update_project_submit(project_id):
 @corporate_only
 def delete_project(project_id):
     p = ConstructionContract.query.get_or_404(project_id)
+    # Delete related project_expenses first (foreign key constraint)
+    ProjectExpense.query.filter_by(contract_id=project_id).delete()
     db.session.delete(p)
     db.session.commit()
 
