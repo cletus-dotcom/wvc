@@ -12,6 +12,173 @@ This guide walks you through deploying your WVC Flask app to **Render (free tier
 
 ---
 
+## Step 0: Migrate Existing PostgreSQL Database to Supabase (Optional)
+
+If you have an existing PostgreSQL database (local or hosted) and want to migrate it to Supabase, follow these steps:
+
+### 0.1 Export Your Existing Database
+
+**On Windows (PowerShell):**
+
+1. **Install PostgreSQL client tools** (if not already installed):
+   - Download from [postgresql.org/download/windows](https://www.postgresql.org/download/windows/)
+   - Or use Chocolatey: `choco install postgresql` (includes `pg_dump` and `psql`)
+   - **Important**: The command is **`pg_dump`** (with "pg"), not `g_dump`. During install, check "Add PostgreSQL bin to PATH" so `pg_dump` works in PowerShell. If it's not in PATH, use the full path, e.g. `"C:\Program Files\PostgreSQL\16\bin\pg_dump.exe"`.
+
+2. **Export the database schema and data**:
+   ```powershell
+   # Export everything (schema + data) — command is pg_dump (not g_dump)
+   pg_dump -h localhost -U postgres -d wvc -F c -f wvc_backup.dump
+   
+   # Or export as SQL (easier to inspect/edit)
+   pg_dump -h localhost -U postgres -d wvc -f wvc_backup.sql
+   ```
+
+   **Parameters:**
+   - `-h localhost`: Database host (use your actual host if remote)
+   - `-U postgres`: Database username
+   - `-d wvc`: Database name
+   - `-F c`: Custom format (binary, smaller file) OR `-f wvc_backup.sql` for SQL format
+   - `-f filename`: Output file path
+
+3. **If prompted for password**, enter your PostgreSQL password.
+
+**Alternative: Export schema only (no data)**:
+   ```powershell
+   pg_dump -h localhost -U postgres -d wvc --schema-only -f wvc_schema_only.sql
+   ```
+
+**Export data only (no schema)**:
+   ```powershell
+   pg_dump -h localhost -U postgres -d wvc --data-only -f wvc_data_only.sql
+   ```
+
+### 0.2 Create Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and sign up/login
+2. Click **"New Project"**
+3. Fill in:
+   - **Name**: `wvc-app` (or your choice)
+   - **Database Password**: Create a strong password (save it!)
+   - **Region**: Choose closest to your users
+   - **Pricing Plan**: Select **Free**
+4. Click **"Create new project"** (takes 1-2 minutes)
+
+### 0.3 Import Database into Supabase
+
+**Option A: Using psql (Command Line) - Recommended**
+
+1. **Get your Supabase connection string**:
+   - In Supabase dashboard: **Settings** → **Database**
+   - Copy the **"URI"** connection string (replace `[YOUR-PASSWORD]` with your actual password)
+   - Example: `postgresql://postgres:YourPassword123@db.abcdefghijklmnop.supabase.co:5432/postgres`
+
+2. **Import the SQL dump**:
+   ```powershell
+   # If you exported as SQL file
+   psql "postgresql://postgres:YourPassword123@db.abcdefghijklmnop.supabase.co:5432/postgres" -f wvc_backup.sql
+   ```
+
+   **Or if you exported as custom format (.dump)**:
+   ```powershell
+   pg_restore -d "postgresql://postgres:YourPassword123@db.abcdefghijklmnop.supabase.co:5432/postgres" wvc_backup.dump
+   ```
+
+3. **If you get "could not translate host name ... Unknown host"**, try:
+   - **Wake up your Supabase project**: Free tier projects pause after inactivity. Go to [Supabase Dashboard](https://supabase.com/dashboard) → your project → if it says **Paused**, click **Restore** and wait 1–2 minutes, then run `pg_restore` again.
+   - **Use the Connection Pooler (Session Mode)** URL (different hostname that often resolves better): Supabase Dashboard → **Settings** → **Database** → **Connection pooling** → copy **Session mode** URI and use that with `pg_restore -d "..." wvc_backup.dump`.
+   - **URL-encode special characters in your password** (e.g. `!` → `%21`) in the connection string.
+
+4. **If you get "password authentication failed for user"** when using the pooler URL:
+   - The pooler uses the **same database password** you set when creating the Supabase project (not a different "pooler" password).
+   - In Supabase: **Settings** → **Database** → copy the **Session mode** URI. It will show `[YOUR-PASSWORD]` — replace only that with your real database password. If the password contains `!`, `#`, `@`, `%`, etc., URL-encode them (e.g. `!` → `%21`, `#` → `%23`, `@` → `%40`).
+   - Or try the **direct** connection (URI tab, not pooler) for `pg_restore` now that the project is awake: `postgresql://postgres:YOUR_PASSWORD_ENCODED@db.PROJECT_REF.supabase.co:5432/postgres`.
+
+**Option B: Using Supabase SQL Editor (For Small Databases)**
+
+1. In Supabase dashboard, go to **SQL Editor**
+2. Click **"New query"**
+3. Open your `wvc_backup.sql` file in a text editor
+4. Copy the entire contents and paste into the SQL Editor
+5. Click **"Run"** (or press `Ctrl+Enter`)
+
+   **⚠️ Note**: This method works best for small databases (< 10MB). For larger databases, use `psql` (Option A).
+
+**Option C: Using pgAdmin (GUI Tool)**
+
+1. Download [pgAdmin](https://www.pgadmin.org/download/)
+2. Add a new server connection using your Supabase connection string
+3. Right-click on the `postgres` database → **Restore**
+4. Select your `.dump` file and restore
+
+### 0.4 Verify Migration
+
+1. **Check tables in Supabase**:
+   - Go to **Table Editor** in Supabase dashboard
+   - You should see all your tables listed
+
+2. **Check row counts**:
+   - Click on a table → **View data**
+   - Verify data matches your source database
+
+3. **Test connection from your app**:
+   - Update your local `.env` file with Supabase `DATABASE_URL`
+   - Run your Flask app locally and verify it connects
+
+### 0.5 Common Issues and Fixes
+
+**Issue: "Permission denied" or "Access denied"**
+- **Fix**: Make sure you're using the `postgres` user (default Supabase admin user)
+- Check that your connection string uses the correct password
+
+**Issue: "Relation already exists"**
+- **Fix**: Drop existing tables in Supabase first:
+  ```sql
+  -- In Supabase SQL Editor, run:
+  DROP SCHEMA public CASCADE;
+  CREATE SCHEMA public;
+  GRANT ALL ON SCHEMA public TO postgres;
+  GRANT ALL ON SCHEMA public TO public;
+  ```
+  Then re-import your database.
+
+**Issue: "Encoding mismatch" or "Character set errors"**
+- **Fix**: Export with explicit encoding:
+  ```powershell
+  pg_dump -h localhost -U postgres -d wvc --encoding=UTF8 -f wvc_backup.sql
+  ```
+
+**Issue: "Foreign key constraint violations"**
+- **Fix**: Import in the correct order, or disable constraints temporarily:
+  ```sql
+  -- Before import
+  SET session_replication_role = 'replica';
+  -- After import
+  SET session_replication_role = 'origin';
+  ```
+
+**Issue: "Large file timeout"**
+- **Fix**: Use `psql` command line instead of SQL Editor, or split the dump into smaller files
+
+### 0.6 After Migration: Update Your App
+
+1. **Update `.env` file** (local development):
+   ```env
+   DATABASE_URL=postgresql://postgres:YourPassword123@db.abcdefghijklmnop.supabase.co:5432/postgres
+   ```
+
+2. **Update Render environment variables** (production):
+   - Go to Render → Your Service → **Environment**
+   - Update `DATABASE_URL` with your Supabase connection string
+
+3. **Run Flask migrations** (if using Flask-Migrate):
+   ```powershell
+   flask db upgrade
+   ```
+   This ensures your migration history is synced with Supabase.
+
+---
+
 ## Step 1: Set Up Supabase (Free Tier)
 
 ### 1.1 Create a Supabase Project
@@ -746,9 +913,11 @@ Render builds from your GitHub repo. If your latest code is only on your laptop,
 
 #### 2. **Build from the same branch**
 
-1. In Render: **Settings** → **Build & Deploy**.
-2. Check **Branch**. It must be the branch you push to (e.g. `main` or `master`).
-3. If it was wrong, set the correct branch, save, and trigger a new deploy.
+1. In the Render dashboard, open your **Web Service** (e.g. `wvc-app`) — not the Workspace (e.g. "bobix") settings.
+2. In the **left sidebar** of that service, click **Settings**.
+3. In the **right-hand sub-menu**, click **Build & Deploy** (some accounts show **Build Pipeline**).
+4. On that page, find the **Branch** field. It must be the branch you push to (e.g. `main` or `master`).
+5. If it was wrong, set the correct branch, save, and trigger a new deploy.
 
 #### 3. **Environment variables (must match what the app needs)**
 
@@ -767,7 +936,7 @@ The app uses these in production; set them in Render → **Environment**:
 
 If migrations did not run or failed on Render, the database can be missing tables or columns and you’ll get errors that don’t happen locally.
 
-1. In Render: **Settings** → **Build & Deploy**.
+1. Open your **Web Service** → **Settings** (left sidebar) → **Build & Deploy** (or **Build Pipeline**) on the right.
 2. Set **Pre-Deploy Command** (or **Release Command**) to:
    ```bash
    export FLASK_APP=run:app && flask db upgrade

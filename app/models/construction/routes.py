@@ -511,33 +511,61 @@ def next_invoice_number():
         return jsonify({"message": "Error generating invoice number.", "error": str(e)}), 500
 
 
+def _parse_expense_date(value):
+    """Parse expense_date from JSON (string YYYY-MM-DD or already date). Returns date or None."""
+    if value is None:
+        return None
+    if hasattr(value, "year"):  # already date-like
+        return value
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value[:10], "%Y-%m-%d").date()
+        except ValueError:
+            try:
+                return datetime.strptime(value[:10], "%m/%d/%Y").date()
+            except ValueError:
+                return None
+    return None
+
+
 @construction_bp.post("/project/<int:project_id>/add-materials")
 @login_required
 @department_required("Construction", "Corporate")
 def add_materials(project_id):
+    ConstructionContract.query.get_or_404(project_id)
     data = request.get_json()
-    expense_date = data.get("expense_date")
+    raw_date = data.get("expense_date")
+    expense_date = _parse_expense_date(raw_date)
     expense_type = data.get("expense_type")
     materials = data.get("materials", [])
 
     if not expense_date or not materials:
         return jsonify({"message": "Missing required fields."}), 400
 
-    # --- Clean and validate materials ---
+    # --- Clean and validate materials (use Decimal for DB Numeric columns) ---
     valid_rows = []
     for m in materials:
         item = (m.get("item") or "").strip()
         qty = m.get("qty") or 0
         unit = (m.get("unit") or "").strip()
         unit_price = m.get("unit_price") or 0
-        material_amount = m.get("material_amount") or qty * unit_price
+        material_amount = m.get("material_amount") or (float(qty) * float(unit_price) if (qty and unit_price) else 0)
 
-        try: qty = float(qty)
-        except: qty = 0
-        try: unit_price = float(unit_price)
-        except: unit_price = 0
-        try: material_amount = float(material_amount)
-        except: material_amount = qty * unit_price
+        try:
+            qty = Decimal(str(float(qty)))
+        except (TypeError, ValueError):
+            qty = Decimal("0")
+        try:
+            unit_price = Decimal(str(float(unit_price)))
+        except (TypeError, ValueError):
+            unit_price = Decimal("0")
+        try:
+            material_amount = Decimal(str(float(material_amount)))
+        except (TypeError, ValueError):
+            material_amount = qty * unit_price
 
         if item and qty > 0:
             valid_rows.append({
@@ -545,51 +573,53 @@ def add_materials(project_id):
                 "qty": qty,
                 "unit": unit,
                 "unit_price": unit_price,
-                "material_amount": material_amount
+                "material_amount": material_amount,
             })
 
     if not valid_rows:
         return jsonify({"message": "No valid materials to save."}), 400
 
     session_user = session.get("user_id")
+    if session_user is not None:
+        try:
+            session_user = int(session_user)
+        except (TypeError, ValueError):
+            session_user = None
     today = datetime.today().date()
 
     try:
-        with db.session.begin():  # atomic transaction
-            # --- UPSERT DailyInvoiceCounter ---
-            insert_stmt = pg_insert(DailyInvoiceCounter).values(
-                invoice_date=today, last_seq=1
-            ).on_conflict_do_update(
-                index_elements=[DailyInvoiceCounter.invoice_date],
-                set_=dict(last_seq=DailyInvoiceCounter.last_seq + 1)
-            ).returning(DailyInvoiceCounter.last_seq)
+        # --- UPSERT DailyInvoiceCounter ---
+        insert_stmt = pg_insert(DailyInvoiceCounter).values(
+            invoice_date=today, last_seq=1
+        ).on_conflict_do_update(
+            index_elements=[DailyInvoiceCounter.invoice_date],
+            set_=dict(last_seq=DailyInvoiceCounter.last_seq + 1),
+        ).returning(DailyInvoiceCounter.last_seq)
 
-            result = db.session.execute(insert_stmt)
-            last_seq = result.scalar()  # safely get sequence
+        result = db.session.execute(insert_stmt)
+        row = result.fetchone()
+        last_seq = int(row[0]) if row else 1
 
-            invoice_number = f"INV-{today.strftime('%Y%m%d')}-{last_seq:04d}"
+        invoice_number = f"INV-{today.strftime('%Y%m%d')}-{last_seq:04d}"
 
-            # --- Save all materials with the same invoice number ---
-            expenses = [
-                ProjectExpense(
-                    contract_id=project_id,
-                    expense_type=expense_type,
-                    expense_date=expense_date,
-                    item=m["item"],
-                    qty=m["qty"],
-                    unit=m["unit"],
-                    unit_price=m["unit_price"],
-                    material_amount=m["material_amount"],
-                    invoice_number=invoice_number,
-                    created_by=session_user,
-                )
-                for m in valid_rows
-            ]
-            db.session.add_all(expenses)
-
+        expenses = [
+            ProjectExpense(
+                contract_id=project_id,
+                expense_type=expense_type,
+                expense_date=expense_date,
+                item=m["item"],
+                qty=m["qty"],
+                unit=m["unit"],
+                unit_price=m["unit_price"],
+                material_amount=m["material_amount"],
+                invoice_number=invoice_number,
+                created_by=session_user,
+            )
+            for m in valid_rows
+        ]
+        db.session.add_all(expenses)
         db.session.commit()
         return jsonify({"message": "Materials saved successfully!", "invoice_number": invoice_number})
-
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error saving materials.", "error": str(e)}), 500
