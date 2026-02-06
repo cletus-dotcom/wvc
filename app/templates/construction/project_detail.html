@@ -1349,67 +1349,55 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         daysInput.addEventListener("input", computeTotal);
         if (overtimeHoursInput) overtimeHoursInput.addEventListener("input", computeTotal);
-        
-        // Add Enter key handler for days input - similar to materials table
+
+        function addNewLaborRowOnEnter() {
+            computeTotal();
+            const table = document.getElementById("laborTable");
+            if (!table) return;
+            const tbody = table.querySelector("tbody");
+            if (!tbody) return;
+            const newRow = tbody.insertRow();
+            newRow.innerHTML = `
+                <td>
+                    <div class="position-relative">
+                        <input type="text" class="form-control employee-input">
+                    </div>
+                </td>
+                <td><input class="form-control rate-input" readonly></td>
+                <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                <td><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
+                <td><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
+                <td><input class="form-control row-total" readonly></td>
+                <td><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
+            `;
+            attachLaborRowEvents(newRow);
+            setTimeout(() => {
+                const empInput = newRow.querySelector(".employee-input");
+                if (empInput) empInput.focus();
+            }, 50);
+        }
+
+        // Enter on Days: add new row and focus new row's employee input
         daysInput.addEventListener("keydown", function(e) {
             if (e.key === "Enter" || e.keyCode === 13) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                
-                console.log("Enter pressed on days input");
-                
-                // Compute total for current row
-                computeTotal();
-                
-                // Get the labor table and tbody
-                const table = document.getElementById("laborTable");
-                if (!table) {
-                    console.error("Labor table not found");
-                    return;
-                }
-                
-                const tbody = table.querySelector("tbody");
-                if (!tbody) {
-                    console.error("Labor table tbody not found");
-                    return;
-                }
-                
-                console.log("Creating new row");
-                
-                // Create new row
-                const newRow = tbody.insertRow();
-                newRow.innerHTML = `
-                    <td>
-                        <div class="position-relative">
-                            <input type="text" class="form-control employee-input">
-                        </div>
-                    </td>
-                    <td><input class="form-control rate-input" readonly></td>
-                    <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
-                    <td><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
-                    <td><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
-                    <td><input class="form-control row-total" readonly></td>
-                    <td><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
-                `;
-                
-                console.log("New row created, attaching events");
-                
-                // Attach events to new row
-                attachLaborRowEvents(newRow);
-                
-                // Focus on first column
-                setTimeout(() => {
-                    const empInput = newRow.querySelector(".employee-input");
-                    if (empInput) {
-                        console.log("Focusing on new employee input");
-                        empInput.focus();
-                    } else {
-                        console.error("New employee input not found");
-                    }
-                }, 50);
+                addNewLaborRowOnEnter();
             }
         });
+
+        // Enter on Overtime Hours: same behavior - add new row and focus new row's employee input
+        if (overtimeHoursInput) {
+            overtimeHoursInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter" || e.keyCode === 13) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    addNewLaborRowOnEnter();
+                }
+            });
+        }
 
         const deleteBtn = row.querySelector(".del-labor-row");
         if (deleteBtn) {
