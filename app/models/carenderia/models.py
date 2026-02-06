@@ -48,6 +48,18 @@ class CarenderiaWage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+class CarenderiaPurchaseItem(db.Model):
+    __tablename__ = "carenderia_purchase_items"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    trans_id = db.Column(db.BigInteger, db.ForeignKey("carenderia_transaction.id", ondelete="CASCADE"), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    qty = db.Column(db.Numeric(12, 3), default=0)
+    unit = db.Column(db.String(50), nullable=True)
+    unit_price = db.Column(db.Numeric(14, 2), default=0)
+    amount = db.Column(db.Numeric(14, 2), default=0)
+
+
 class CarenderiaTransaction(db.Model):
     __tablename__ = "carenderia_transaction"
 
@@ -55,7 +67,15 @@ class CarenderiaTransaction(db.Model):
     date = db.Column(db.Date, nullable=False)
     trans_type = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Numeric(14, 2), nullable=False)
+    reference_number = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+    purchase_items = db.relationship(
+        "CarenderiaPurchaseItem",
+        backref="transaction",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
 
 
 class CarenderiaDailyExpense(db.Model):

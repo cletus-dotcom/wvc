@@ -248,9 +248,9 @@
         <tbody>
             <tr>
                 <td>
-                    <div class="position-relative">
-                        <input type="text" class="form-control employee-input">
-                    </div>
+                    <select class="form-select form-select-sm employee-select">
+                        <option value="">-- Select employee --</option>
+                    </select>
                 </td>
                 <td><input class="form-control rate-input" readonly></td>
                 <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
@@ -1193,10 +1193,30 @@ document.addEventListener("DOMContentLoaded", async function () {
             const resp = await fetch("{{ url_for('construction.get_employees') }}");
             const data = await resp.json();
             employeesList = data.employees.map(e => ({id: e.id, name: e.name, rate: e.rate_per_day})) || [];
+            populateLaborEmployeeSelects();
         } catch(e) { 
             console.error(e); 
         }
     }
+
+    function getEmployeeOptionsHTML() {
+        let opts = '<option value="">-- Select employee --</option>';
+        employeesList.forEach(e => {
+            const rate = e.rate != null ? String(e.rate) : '';
+            const name = (e.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            opts += `<option value="${e.id}" data-rate="${rate}">${name}</option>`;
+        });
+        return opts;
+    }
+
+    function populateLaborEmployeeSelects() {
+        document.querySelectorAll("#laborTable .employee-select").forEach(sel => {
+            const currentVal = sel.value;
+            sel.innerHTML = getEmployeeOptionsHTML();
+            if (currentVal) sel.value = currentVal;
+        });
+    }
+
     await loadEmployees();
 
     /* ==========================================
@@ -1269,9 +1289,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>
-                <div class="position-relative">
-                    <input type="text" class="form-control employee-input">
-                </div>
+                <select class="form-select form-select-sm employee-select">${getEmployeeOptionsHTML()}</select>
             </td>
             <td><input class="form-control rate-input" readonly></td>
             <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
@@ -1283,9 +1301,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         attachLaborRowEvents(row);
         
         if (autoFocus) {
-            const empInput = row.querySelector(".employee-input");
-            if (empInput) {
-                setTimeout(() => empInput.focus(), 10);
+            const empSelect = row.querySelector(".employee-select");
+            if (empSelect) {
+                setTimeout(() => empSelect.focus(), 10);
             }
         }
         
@@ -1293,47 +1311,40 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     function attachLaborRowEvents(row) {
-        const empInput = row.querySelector(".employee-input");
+        const empSelect = row.querySelector(".employee-select");
         const rateInput = row.querySelector(".rate-input");
         const daysInput = row.querySelector(".days-input");
         const overtimeHoursInput = row.querySelector(".overtime-hours-input");
         const overtimeAmountInput = row.querySelector(".overtime-amount-input");
         const totalInput = row.querySelector(".row-total");
 
-        attachAutocomplete(empInput, employeesList.map(e => e.name), {
-            onSelect: () => {
-                const selectedEmployee = empInput.value.trim();
-                if (!selectedEmployee) return;
-                
-                // Check if this employee is already in another row
-                const allRows = laborTable.querySelectorAll("tbody tr");
-                let isDuplicate = false;
-                
-                for (let otherRow of allRows) {
-                    if (otherRow === row) continue; // Skip current row
-                    const otherEmpInput = otherRow.querySelector(".employee-input");
-                    if (otherEmpInput && otherEmpInput.value.trim() === selectedEmployee) {
-                        isDuplicate = true;
-                        break;
-                    }
-                }
-                
-                if (isDuplicate) {
-                    // Clear the selection and show error
-                    empInput.value = "";
-                    empInput.focus();
-                    alert(`Employee "${selectedEmployee}" is already added. Each employee can only be entered once.`);
+        if (empSelect) {
+            empSelect.addEventListener("change", function() {
+                const selectedId = this.value;
+                if (!selectedId) {
+                    rateInput.value = '';
+                    computeTotal();
                     return;
                 }
-                
-                // Employee is unique, proceed with normal flow
-                const emp = employeesList.find(e => e.name === selectedEmployee);
-                if (emp) rateInput.value = parseFloat(emp.rate).toFixed(2);
-                daysInput.focus();
+                const opt = this.options[this.selectedIndex];
+                const rate = opt.getAttribute("data-rate");
+                if (rate != null && rate !== '') rateInput.value = parseFloat(rate).toFixed(2);
+                else rateInput.value = '';
+                // Check duplicate: same employee in another row
+                const allRows = laborTable.querySelectorAll("tbody tr");
+                for (let otherRow of allRows) {
+                    if (otherRow === row) continue;
+                    const otherSelect = otherRow.querySelector(".employee-select");
+                    if (otherSelect && otherSelect.value === selectedId) {
+                        this.value = "";
+                        rateInput.value = '';
+                        alert("This employee is already added. Each employee can only be entered once.");
+                        return;
+                    }
+                }
                 computeTotal();
-            },
-            nextFocus: daysInput
-        });
+            });
+        }
 
         function computeTotal() {
             const rate = parseFloat(rateInput.value) || 0;
@@ -1359,9 +1370,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             const newRow = tbody.insertRow();
             newRow.innerHTML = `
                 <td>
-                    <div class="position-relative">
-                        <input type="text" class="form-control employee-input">
-                    </div>
+                    <select class="form-select form-select-sm employee-select">${getEmployeeOptionsHTML()}</select>
                 </td>
                 <td><input class="form-control rate-input" readonly></td>
                 <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
@@ -1372,8 +1381,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             `;
             attachLaborRowEvents(newRow);
             setTimeout(() => {
-                const empInput = newRow.querySelector(".employee-input");
-                if (empInput) empInput.focus();
+                const empSelect = newRow.querySelector(".employee-select");
+                if (empSelect) empSelect.focus();
             }, 50);
         }
 
@@ -1448,35 +1457,32 @@ document.addEventListener("DOMContentLoaded", async function () {
         const laborEntries = [];
 
         rows.forEach(row => {
-            const empInput = row.querySelector(".employee-input");
+            const empSelect = row.querySelector(".employee-select");
             const rateInput = row.querySelector(".rate-input");
             const daysInput = row.querySelector(".days-input");
             const overtimeHoursInput = row.querySelector(".overtime-hours-input");
             const overtimeAmountInput = row.querySelector(".overtime-amount-input");
             const totalInput = row.querySelector(".row-total");
 
-            const employeeName = (empInput?.value || "").trim();
+            const laborId = empSelect?.value ? parseInt(empSelect.value, 10) : null;
+            const employeeName = empSelect?.selectedIndex > 0 ? (empSelect.options[empSelect.selectedIndex].textContent || "").trim() : "";
             const ratePerDay = parseFloat(rateInput?.value) || 0;
             const days = parseFloat(daysInput?.value) || 0;
             const overtimeHours = parseFloat(overtimeHoursInput?.value) || 0;
             const overtimeAmount = parseFloat(overtimeAmountInput?.value) || 0;
             const laborCharge = parseFloat(totalInput?.value) || (ratePerDay * days + overtimeAmount);
 
-            // Only add rows with valid employee and (days > 0 or overtime > 0)
-            if (employeeName && (days > 0 || overtimeHours > 0)) {
-                // Find employee ID from employeesList
-                const emp = employeesList.find(e => e.name === employeeName);
-                if (emp) {
-                    laborEntries.push({
-                        employee_name: employeeName,
-                        labor_id: emp.id || null,
-                        rate_per_day: ratePerDay,
-                        days: days,
-                        overtime_hours: overtimeHours,
-                        overtime_amount: overtimeAmount,
-                        labor_charge: laborCharge
-                    });
-                }
+            // Only add rows with valid employee selected and (days > 0 or overtime > 0)
+            if (laborId && employeeName && (days > 0 || overtimeHours > 0)) {
+                laborEntries.push({
+                    employee_name: employeeName,
+                    labor_id: laborId,
+                    rate_per_day: ratePerDay,
+                    days: days,
+                    overtime_hours: overtimeHours,
+                    overtime_amount: overtimeAmount,
+                    labor_charge: laborCharge
+                });
             }
         });
 
@@ -1516,9 +1522,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 laborTable.querySelector("tbody").innerHTML = `
                     <tr>
                         <td>
-                            <div class="position-relative">
-                                <input type="text" class="form-control employee-input">
-                            </div>
+                            <select class="form-select form-select-sm employee-select">${getEmployeeOptionsHTML()}</select>
                         </td>
                         <td><input class="form-control rate-input" readonly></td>
                         <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>

@@ -4,7 +4,7 @@ from app.models.core import Employee, Department
 from app.extensions import db
 from sqlalchemy.orm import joinedload
 from . import carenderia_bp
-from .models import CarenderiaWage, CarenderiaTransaction, CarenderiaDailyExpense
+from .models import CarenderiaWage, CarenderiaTransaction, CarenderiaDailyExpense, CarenderiaPurchaseItem
 from datetime import datetime, date
 from sqlalchemy import extract, func
 import calendar
@@ -235,7 +235,7 @@ def save_wages():
 @login_required
 @department_required("Carenderia", "Corporate")
 def save_transactions():
-    """Save transactions to carenderia_transaction table."""
+    """Save transactions to carenderia_transaction table. For Purchases, saves reference_number and items."""
     data = request.get_json() or {}
     transactions = data.get("transactions", [])
 
@@ -256,12 +256,27 @@ def save_transactions():
             except ValueError:
                 continue
 
+            reference_number = trans.get("referenceNumber") if trans_type == "Purchases" else None
             transaction = CarenderiaTransaction(
                 date=parsed_date,
                 trans_type=trans_type,
-                amount=float(amount) if amount else 0
+                amount=float(amount) if amount else 0,
+                reference_number=reference_number
             )
             db.session.add(transaction)
+            db.session.flush()  # get transaction.id
+
+            if trans_type == "Purchases":
+                items = trans.get("items") or []
+                for item in items:
+                    db.session.add(CarenderiaPurchaseItem(
+                        trans_id=transaction.id,
+                        description=item.get("description") or "",
+                        qty=float(item.get("qty") or 0),
+                        unit=item.get("unit") or "",
+                        unit_price=float(item.get("unit_price") or 0),
+                        amount=float(item.get("amount") or 0)
+                    ))
 
         db.session.commit()
         return jsonify({"success": True, "message": f"Successfully saved {len(transactions)} transaction(s)."})
@@ -387,18 +402,43 @@ def get_transactions_by_date():
     
     transactions = CarenderiaTransaction.query.filter_by(date=parsed_date)\
                                               .order_by(CarenderiaTransaction.id.asc()).all()
-    
+
+    def trans_to_json(t):
+        out = {
+            "id": t.id,
+            "date": t.date.isoformat() if t.date else None,
+            "trans_type": t.trans_type,
+            "amount": float(t.amount) if t.amount else 0,
+            "reference_number": t.reference_number or None
+        }
+        if t.trans_type == "Purchases":
+            items = CarenderiaPurchaseItem.query.filter_by(trans_id=t.id).order_by(CarenderiaPurchaseItem.id.asc()).all()
+            out["items"] = [
+                {
+                    "description": it.description or "",
+                    "qty": float(it.qty) if it.qty else 0,
+                    "unit": it.unit or "",
+                    "unit_price": float(it.unit_price) if it.unit_price else 0,
+                    "amount": float(it.amount) if it.amount else 0
+                }
+                for it in items
+            ]
+        return out
+
+    wages = CarenderiaWage.query.filter_by(date=parsed_date).order_by(CarenderiaWage.id.asc()).all()
+    wages_list = [
+        {
+            "emp_name": w.emp_name or "",
+            "emp_rate": float(w.emp_rate) if w.emp_rate else 0,
+            "amount": float(w.amount) if w.amount else 0
+        }
+        for w in wages
+    ]
+
     return jsonify({
         "success": True,
-        "transactions": [
-            {
-                "id": t.id,
-                "date": t.date.isoformat() if t.date else None,
-                "trans_type": t.trans_type,
-                "amount": float(t.amount) if t.amount else 0
-            }
-            for t in transactions
-        ]
+        "transactions": [trans_to_json(t) for t in transactions],
+        "wages": wages_list
     })
 
 
@@ -521,6 +561,7 @@ def get_transactions_by_month():
                 "date": date_str,
                 "daily_collection": 0,
                 "wages": 0,
+                "daily_expense": 0,
                 "electric_bill": 0,
                 "water_bill": 0,
                 "maintenance": 0,
@@ -550,6 +591,8 @@ def get_transactions_by_month():
             monthly_data[date_str]["daily_collection"] += amount
         elif trans_type == "Wages":
             monthly_data[date_str]["wages"] += amount
+        elif trans_type == "Daily Expense":
+            monthly_data[date_str]["daily_expense"] += amount
         elif trans_type == "Electric Bill":
             monthly_data[date_str]["electric_bill"] += amount
         elif trans_type == "Water Bill":
@@ -574,6 +617,7 @@ def get_transactions_by_month():
         day_data = monthly_data[date_str]
         day_data["total_deductions"] = (
             day_data["wages"] +
+            day_data["daily_expense"] +
             day_data["electric_bill"] +
             day_data["water_bill"] +
             day_data["maintenance"] +

@@ -3,35 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <title>WVC</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
     <style>
         body {
             padding-top: 50px;
-            background: url('{{ url_for('static', filename='images/base.png') }}') no-repeat center center fixed;
-            background-size: cover;
+            min-height: 100vh;
             font-family: "Segoe UI", sans-serif;
+            position: relative;
+            overflow-x: hidden;
+            /* Darker silver gradient so white glitters stand out */
+            background: linear-gradient(145deg,
+                #404040 0%,
+                #4d4d4d 15%,
+                #5a5a5a 35%,
+                #666666 50%,
+                #525252 65%,
+                #5e5e5e 80%,
+                #454545 100%
+            ) fixed;
+            background-size: 100% 100%;
+            background-position: center;
+        }
+
+        /* Animated starfield - more stars/stardust, varied sizes, drift left-to-right */
+        .dashboard-starbg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                radial-gradient(1px 1px at 2% 8%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 6% 22%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 10% 14%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 14% 38%, #ffffff, transparent),
+                radial-gradient(1px 1px at 18% 52%, #ffffff, transparent),
+                radial-gradient(3px 3px at 22% 8%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 26% 68%, #ffffff, transparent),
+                radial-gradient(2px 2px at 30% 28%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 34% 82%, #ffffff, transparent),
+                radial-gradient(3.5px 3.5px at 38% 44%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 42% 16%, #ffffff, transparent),
+                radial-gradient(1px 1px at 46% 58%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 50% 72%, #ffffff, transparent),
+                radial-gradient(4px 4px at 54% 32%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 58% 88%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 62% 12%, #ffffff, transparent),
+                radial-gradient(2px 2px at 66% 48%, #ffffff, transparent),
+                radial-gradient(1px 1px at 70% 64%, #ffffff, transparent),
+                radial-gradient(3px 3px at 74% 24%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 78% 76%, #ffffff, transparent),
+                radial-gradient(2.2px 2.2px at 82% 42%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 86% 18%, #ffffff, transparent),
+                radial-gradient(3.5px 3.5px at 90% 56%, #ffffff, transparent),
+                radial-gradient(1px 1px at 94% 92%, #ffffff, transparent),
+                radial-gradient(2px 2px at 8% 62%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 24% 36%, #ffffff, transparent),
+                radial-gradient(4px 4px at 40% 6%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 56% 94%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 72% 52%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 88% 78%, #ffffff, transparent),
+                radial-gradient(3px 3px at 4% 45%, #ffffff, transparent),
+                radial-gradient(2px 2px at 16% 86%, #ffffff, transparent),
+                radial-gradient(1px 1px at 48% 4%, #ffffff, transparent),
+                radial-gradient(2.2px 2.2px at 80% 34%, #ffffff, transparent),
+                radial-gradient(4.5px 4.5px at 32% 62%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 64% 38%, #ffffff, transparent),
+                radial-gradient(5px 5px at 12% 28%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 96% 66%, #ffffff, transparent);
+            background-size: 100% 100%;
+            background-repeat: repeat;
+            animation: stardust-glitter 5s ease-in-out infinite, stardust-drift 28s linear infinite;
+        }
+
+        .dashboard-starbg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(1px 1px at 1% 15%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 5% 42%, #ffffff, transparent),
+                radial-gradient(2px 2px at 9% 8%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 13% 72%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 17% 28%, #ffffff, transparent),
+                radial-gradient(1px 1px at 21% 55%, #ffffff, transparent),
+                radial-gradient(3px 3px at 25% 85%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 29% 18%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 33% 48%, #ffffff, transparent),
+                radial-gradient(2px 2px at 37% 62%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 41% 92%, #ffffff, transparent),
+                radial-gradient(2.2px 2.2px at 45% 12%, #ffffff, transparent),
+                radial-gradient(1px 1px at 49% 38%, #ffffff, transparent),
+                radial-gradient(3.5px 3.5px at 53% 78%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 57% 22%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 61% 58%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 65% 88%, #ffffff, transparent),
+                radial-gradient(1px 1px at 69% 5%, #ffffff, transparent),
+                radial-gradient(2px 2px at 73% 44%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 77% 68%, #ffffff, transparent),
+                radial-gradient(3px 3px at 81% 32%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 85% 82%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 89% 52%, #ffffff, transparent),
+                radial-gradient(2.2px 2.2px at 93% 16%, #ffffff, transparent),
+                radial-gradient(1px 1px at 97% 95%, #ffffff, transparent),
+                radial-gradient(4px 4px at 11% 48%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 35% 74%, #ffffff, transparent),
+                radial-gradient(2px 2px at 59% 6%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 83% 56%, #ffffff, transparent);
+            background-size: 100% 100%;
+            animation: stardust-glitter 4.5s ease-in-out infinite 1s, stardust-drift 24s linear infinite 2s;
+        }
+
+        .dashboard-starbg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(1.2px 1.2px at 3% 32%, #ffffff, transparent),
+                radial-gradient(2px 2px at 11% 18%, #ffffff, transparent),
+                radial-gradient(1px 1px at 19% 64%, #ffffff, transparent),
+                radial-gradient(3px 3px at 27% 42%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 35% 8%, #ffffff, transparent),
+                radial-gradient(2.2px 2.2px at 43% 76%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 51% 24%, #ffffff, transparent),
+                radial-gradient(1px 1px at 59% 52%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 67% 88%, #ffffff, transparent),
+                radial-gradient(3.5px 3.5px at 75% 36%, #ffffff, transparent),
+                radial-gradient(1.2px 1.2px at 83% 62%, #ffffff, transparent),
+                radial-gradient(2px 2px at 91% 14%, #ffffff, transparent),
+                radial-gradient(1.5px 1.5px at 7% 86%, #ffffff, transparent),
+                radial-gradient(2.5px 2.5px at 23% 54%, #ffffff, transparent),
+                radial-gradient(1px 1px at 39% 22%, #ffffff, transparent),
+                radial-gradient(3px 3px at 55% 68%, #ffffff, transparent),
+                radial-gradient(1.8px 1.8px at 71% 46%, #ffffff, transparent),
+                radial-gradient(4px 4px at 87% 92%, #ffffff, transparent);
+            background-size: 100% 100%;
+            animation: stardust-glitter 6s ease-in-out infinite 2s, stardust-drift 32s linear infinite 1s;
+        }
+
+        @keyframes stardust-glitter {
+            0%, 100% { opacity: 0.5; }
+            25% { opacity: 0.75; }
+            50% { opacity: 1; }
+            75% { opacity: 0.65; }
+        }
+
+        @keyframes stardust-drift {
+            0% { transform: translateX(-6%); }
+            100% { transform: translateX(6%); }
+        }
+
+        .dashboard-container {
+            position: relative;
+            z-index: 1;
+            padding: 30px;
+            padding-top: 40px;
         }
         .logo {
             display: block;
-            margin: 0 auto 20px auto;
+            margin: 0 auto 40px auto;
             max-width: 150px;
+            filter: drop-shadow(0 0 20px rgba(255,255,255,1))
+                    drop-shadow(0 0 45px rgba(255,255,255,0.95))
+                    drop-shadow(0 0 70px rgba(255,255,255,0.85))
+                    drop-shadow(0 0 100px rgba(255,255,255,0.7));
+            box-shadow: 0 0 35px rgba(255,255,255,0.95),
+                        0 0 70px rgba(255,255,255,0.85),
+                        0 0 100px rgba(255,255,255,0.65),
+                        0 0 140px rgba(255,255,255,0.45);
         }
         .dashboard-title {
             text-align: center;
-            color: #fff;
-            text-shadow: 1px 1px 4px rgba(0,0,0,0.7);
+            color: #787c80;
+            font-weight: 700;
+            letter-spacing: 0.02em;
             margin-bottom: 40px;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.9),
+                         0 2px 2px rgba(0,0,0,0.2),
+                         0 3px 4px rgba(0,0,0,0.15),
+                         -1px -1px 0 rgba(255,255,255,0.6),
+                         -2px -2px 3px rgba(255,255,255,0.35);
         }
         .venture-card {
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
-            min-height: 150px; /* uniform height */
+            min-height: 140px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-radius: 15px;
+            border-radius: 12px;
             background-color: rgba(255,255,255,0.2);
             backdrop-filter: blur(8px);
             color: #fff;
@@ -44,20 +206,21 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
         .venture-icon {
-            font-size: 50px;
-            margin-bottom: 15px;
+            font-size: 48px;
+            margin-bottom: 10px;
         }
         .venture-description {
             font-size: 0.9rem;
         }
         .row {
-            gap: 20px;
+            gap: 16px;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
         }
-        .dashboard-container {
-            padding: 30px;
+        .row.ventures-row {
+            flex-wrap: nowrap;
+            justify-content: center;
         }
         /* Ensure equal height across all columns in a row */
         .col-flex {
@@ -89,16 +252,54 @@
             box-shadow: 0 4px 12px rgba(255, 255, 255, 0.7);
             transform: scale(1.1); /* optional slight zoom */
         }
+        .navbar-smbc {
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+        }
 
         .venture-title {
             font-family: "Berlin Sans FB", sans-serif;
+            font-size: 1.25rem;
             text-transform: uppercase;
+            margin-bottom: 4px;
         }
 
+        .dashboard-title {
+            margin-top: 2.5rem;
+        }
+        .dashboard-title .i-spotlight {
+            position: relative;
+            display: inline-block;
+        }
+        .dashboard-title .i-spotlight::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0.14em;
+            width: 0.28em;
+            height: 0.28em;
+            background: rgba(255,255,255,0.95);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255,255,255,1),
+                        0 0 18px rgba(255,255,255,0.9),
+                        0 0 28px rgba(255,255,255,0.7),
+                        0 0 40px rgba(255,255,255,0.4);
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+        .dashboard-credit {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.65);
+            text-align: center;
+            margin-top: 0.75rem;
+            margin-bottom: 0;
+        }
 
     </style>
 </head>
 <body>
+<div class="dashboard-starbg" aria-hidden="true"></div>
 
 <nav class="navbar navbar-dark bg-dark fixed-top shadow">
     <div class="container-fluid d-flex align-items-center">
@@ -111,8 +312,7 @@
                 alt="Menu"
                 class="menu-img">
         </button>
-
-
+        <span class="navbar-text navbar-smbc">SMBC</span>
     </div>
 </nav>
 
@@ -121,49 +321,26 @@
 <div class="container dashboard-container">
     <!-- Logo -->
     <img src="{{ url_for('static', filename='images/wvc_logo.png') }}" alt="WVC Logo" class="logo">
-    
-    <!-- Title -->
-    <h1 class="dashboard-title">St. Michael Builders Corporation</h1>
-    
-    <!-- First Row: Construction -->
-    <div class="row mb-4">
-        {% set construction = ventures[0] %}
-        <div class="col-sm-6 col-md-4 col-flex mx-auto">
-            <div class="venture-card text-center p-4 {{ construction.color }}"
-                onclick="window.location.href='{{ url_for('core.go_construction') }}'">
-                
-                <div class="venture-icon">
-                    <i class="bi {{ construction.icon }}"></i>
-                </div>
 
-                <!-- Apply new class -->
-                <h3 class="venture-title">{{ construction.name }}</h3>
-
-                <p class="venture-description">{{ construction.description }}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Second Row: Carenderia & Catering -->
-    <div class="row">
-        {% for venture in ventures[1:] %}
-        <div class="col-sm-6 col-md-4 col-flex">
+    <!-- Ventures: one row -->
+    <div class="row ventures-row mb-4">
+        {% for venture in ventures %}
+        <div class="col col-flex" style="flex: 1; min-width: 0; max-width: 360px;">
             <div class="venture-card text-center p-4 {{ venture.color }}"
-                onclick="{% if venture.name == 'Carenderia' %}redirectToCarenderia(){% else %}redirectToLogin('{{ venture.url }}'){% endif %}">
-                
+                onclick="{% if venture.name == 'Construction' %}window.location.href='{{ url_for('core.go_construction') }}'{% elif venture.name == 'Carenderia' %}redirectToCarenderia(){% else %}redirectToLogin('{{ venture.url }}'){% endif %}">
                 <div class="venture-icon">
                     <i class="bi {{ venture.icon }}"></i>
                 </div>
-
-                <!-- Apply new class -->
                 <h3 class="venture-title">{{ venture.name }}</h3>
-
                 <p class="venture-description">{{ venture.description }}</p>
             </div>
         </div>
         {% endfor %}
     </div>
 
+    <!-- Title -->
+    <h1 class="dashboard-title">St. M<span class="i-spotlight">i</span>chael Bu<span class="i-spotlight">i</span>lders Corporat<span class="i-spotlight">i</span>on</h1>
+    <p class="dashboard-credit">Powered by: SerKai IT Solutions. All rights reserved 2026.</p>
 
 </div>
 

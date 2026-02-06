@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carenderia Home</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <style>
     .dropdown-menu .dropdown-item:hover {
@@ -52,6 +54,27 @@
 
     #transactionsTableBody tr:hover {
         background-color: rgba(220, 53, 69, 0.1) !important;
+    }
+
+    .purchases-expandable:hover {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+    }
+
+    .purchases-items-row td {
+        border-top: none !important;
+    }
+
+    .wages-expandable:hover {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+    }
+
+    .wages-items-row td {
+        border-top: none !important;
+    }
+
+    /* Widen description column in purchases table */
+    #purchasesItemsTableBody .purchase-desc {
+        min-width: 200px;
     }
 
     .table-responsive {
@@ -228,17 +251,10 @@
                             <label for="transactionType" class="form-label fw-bold">Type of Transaction</label>
                             <select class="form-select" id="transactionType" name="transaction_type" required>
                                 <option value="">Select Type</option>
-                                <option value="Wages">Wages</option>
-                                <option value="Electric Bill">Electric Bill</option>
-                                <option value="Water Bill">Water Bill</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Mayor's Permit">Mayor's Permit</option>
-                                <option value="Rental">Rental</option>
-                                <option value="BIR">BIR</option>
-                                <option value="SSS">SSS</option>
-                                <option value="PAG-IBIG">PAG-IBIG</option>
-                                <option value="Purchases">Purchases</option>
+                                <option value="Daily Expense">Daily Expense</option>
                                 <option value="Daily Sales">Daily Sales</option>
+                                <option value="Purchases">Purchases</option>
+                                <option value="Wages">Wages</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -248,6 +264,113 @@
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-danger w-100">Save Entry</button>
                             <button type="reset" class="btn btn-secondary w-100 mt-2" id="clearFormBtn">Clear</button>
+                        </div>
+                    </div>
+                    <!-- Hidden fields for Daily Expense transaction -->
+                    <div class="row g-3 mt-2" id="dailyExpenseFields" style="display: none;">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">
+                                    <h6 class="mb-0">Daily Expenses</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive" style="max-height: 300px;">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead style="position: sticky; top: 0; background-color: #f8d7da; z-index: 10;">
+                                                <tr>
+                                                    <th style="background-color: #f8d7da;">Expense Type</th>
+                                                    <th style="background-color: #f8d7da;" class="text-end">Amount (₱)</th>
+                                                    <th style="background-color: #f8d7da;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="dailyExpenseEntriesTableBody">
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-2" style="font-size: 0.85rem;">Loading...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="card-footer bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong>Total Amount:</strong>
+                                            <strong id="dailyExpenseGrandTotal">0.00</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden fields for Purchases transaction -->
+                    <div class="row g-3 mt-2" id="purchasesFields" style="display: none;">
+                        <div class="col-md-8">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Reference #</label>
+                                    <input type="text" class="form-control" id="purchasesReference" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Total Amount</label>
+                                    <input type="text" class="form-control" id="purchasesTotalAmount" readonly>
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-2">
+                                <div class="col-12">
+                                    <div class="table-responsive" style="max-height: 400px;">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-danger" style="position: sticky; top: 0; z-index: 10;">
+                                                <tr>
+                                                    <th style="background-color: #f8d7da; width: 40%;">Description</th>
+                                                    <th style="background-color: #f8d7da; width: 10%;">Qty</th>
+                                                    <th style="background-color: #f8d7da; width: 15%;">Unit</th>
+                                                    <th style="background-color: #f8d7da; width: 15%;" class="text-end">Unit Price</th>
+                                                    <th style="background-color: #f8d7da; width: 15%;" class="text-end">Amount</th>
+                                                    <th style="background-color: #f8d7da; width: 5%;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="purchasesItemsTableBody">
+                                                <tr class="purchase-item-row">
+                                                    <td><input type="text" class="form-control form-control-sm purchase-desc" placeholder="Description"></td>
+                                                    <td><input type="number" step="0.01" class="form-control form-control-sm purchase-qty" placeholder="0" min="0"></td>
+                                                    <td><input type="text" class="form-control form-control-sm purchase-unit" placeholder="Unit"></td>
+                                                    <td><input type="number" step="0.01" class="form-control form-control-sm purchase-unit-price" placeholder="0.00" min="0"></td>
+                                                    <td><input type="text" class="form-control form-control-sm purchase-amount" placeholder="0.00" readonly></td>
+                                                    <td><button type="button" class="btn btn-sm btn-danger delete-purchase-item" style="display: none;">Delete</button></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">
+                                    <h6 class="mb-0">Purchase Items</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive" style="max-height: 300px;">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead style="position: sticky; top: 0; background-color: #f8d7da; z-index: 10;">
+                                                <tr>
+                                                    <th style="background-color: #f8d7da;">Description</th>
+                                                    <th style="background-color: #f8d7da;" class="text-end">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="purchasesEntriesTableBody">
+                                                <tr>
+                                                    <td colspan="2" class="text-center text-muted py-2" style="font-size: 0.85rem;">No items yet</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="card-footer bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong>Total:</strong>
+                                            <strong id="purchasesGrandTotal">0.00</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Hidden fields for Wages transaction -->
@@ -270,11 +393,19 @@
                                 </div>
                             </div>
                             <div class="row g-3 mt-2">
-                                <div class="col-md-6">
-                                    <label for="wagesTotalAmount" class="form-label fw-bold">Total Amount</label>
-                                    <input type="number" step="0.01" class="form-control" id="wagesTotalAmount" name="wages_total_amount" placeholder="0.00" readonly>
+                                <div class="col-md-3">
+                                    <label for="wagesOvertimeHours" class="form-label fw-bold">Overtime Hours</label>
+                                    <input type="number" step="0.01" class="form-control" id="wagesOvertimeHours" name="wages_overtime_hours" placeholder="0" min="0">
                                 </div>
-                                <div class="col-md-6 d-flex align-items-end">
+                                <div class="col-md-3">
+                                    <label for="wagesOvertimeAmount" class="form-label fw-bold">Overtime Amount</label>
+                                    <input type="text" class="form-control" id="wagesOvertimeAmount" name="wages_overtime_amount" placeholder="0.00" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="wagesTotalAmount" class="form-label fw-bold">Total Amount</label>
+                                    <input type="text" class="form-control" id="wagesTotalAmount" name="wages_total_amount" placeholder="0.00" readonly>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
                                     <button type="button" class="btn btn-danger w-100" id="addWagesEmployeeBtn">Add Employee</button>
                                 </div>
                             </div>
@@ -366,45 +497,17 @@
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered mb-0">
                                 <tbody>
-                                    <tr id="rowDeductionWages">
-                                        <td class="fw-bold">Wages</td>
-                                        <td class="text-end" id="deductionWages">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionElectricBill">
-                                        <td class="fw-bold">Electric Bill</td>
-                                        <td class="text-end" id="deductionElectricBill">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionWaterBill">
-                                        <td class="fw-bold">Water Bill</td>
-                                        <td class="text-end" id="deductionWaterBill">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionMaintenance">
-                                        <td class="fw-bold">Maintenance</td>
-                                        <td class="text-end" id="deductionMaintenance">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionMayorsPermit">
-                                        <td class="fw-bold">Mayor's Permit</td>
-                                        <td class="text-end" id="deductionMayorsPermit">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionRental">
-                                        <td class="fw-bold">Rental</td>
-                                        <td class="text-end" id="deductionRental">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionBIR">
-                                        <td class="fw-bold">BIR</td>
-                                        <td class="text-end" id="deductionBIR">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionSSS">
-                                        <td class="fw-bold">SSS</td>
-                                        <td class="text-end" id="deductionSSS">0.00</td>
-                                    </tr>
-                                    <tr id="rowDeductionPAGIBIG">
-                                        <td class="fw-bold">PAG-IBIG</td>
-                                        <td class="text-end" id="deductionPAGIBIG">0.00</td>
+                                    <tr id="rowDeductionDailyExpense">
+                                        <td class="fw-bold">Daily Expense</td>
+                                        <td class="text-end" id="deductionDailyExpense">0.00</td>
                                     </tr>
                                     <tr id="rowDeductionPurchases">
                                         <td class="fw-bold">Purchases</td>
                                         <td class="text-end" id="deductionPurchases">0.00</td>
+                                    </tr>
+                                    <tr id="rowDeductionWages">
+                                        <td class="fw-bold">Wages</td>
+                                        <td class="text-end" id="deductionWages">0.00</td>
                                     </tr>
                                     <tr class="table-secondary">
                                         <td class="fw-bold">Total Deductions</td>
@@ -444,17 +547,10 @@
                                 <label for="editTransactionType" class="form-label fw-bold">Type of Transaction</label>
                                 <select class="form-select" id="editTransactionType" name="transaction_type" required>
                                     <option value="">Select Type</option>
-                                    <option value="Wages">Wages</option>
-                                    <option value="Electric Bill">Electric Bill</option>
-                                    <option value="Water Bill">Water Bill</option>
-                                    <option value="Maintenance">Maintenance</option>
-                                    <option value="Mayor's Permit">Mayor's Permit</option>
-                                    <option value="Rental">Rental</option>
-                                    <option value="BIR">BIR</option>
-                                    <option value="SSS">SSS</option>
-                                    <option value="PAG-IBIG">PAG-IBIG</option>
-                                    <option value="Purchases">Purchases</option>
+                                    <option value="Daily Expense">Daily Expense</option>
                                     <option value="Daily Sales">Daily Sales</option>
+                                    <option value="Purchases">Purchases</option>
+                                    <option value="Wages">Wages</option>
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -515,26 +611,332 @@
             }
         }
 
-        // Show/hide wages fields based on transaction type
+        // Store selected daily expenses (will be added as transactions on Save Entry)
+        let selectedDailyExpenses = [];
+        
+        // Store purchase items
+        let purchaseItems = [];
+        let purchaseReferenceCounter = 1;
+
+        // Generate purchase reference number
+        function generatePurchaseReference() {
+            const date = new Date();
+            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+            return `PUR-${dateStr}-${String(purchaseReferenceCounter).padStart(4, '0')}`;
+        }
+
+        // Show/hide fields based on transaction type
         document.getElementById('transactionType').addEventListener('change', function() {
             const wagesFields = document.getElementById('wagesFields');
+            const dailyExpenseFields = document.getElementById('dailyExpenseFields');
+            const purchasesFields = document.getElementById('purchasesFields');
             const amountField = document.getElementById('amount');
             
             if (this.value === 'Wages') {
                 wagesFields.style.display = 'block';
+                dailyExpenseFields.style.display = 'none';
+                purchasesFields.style.display = 'none';
                 amountField.readOnly = true;
                 amountField.value = '';
                 loadCarenderiaEmployees();
+            } else if (this.value === 'Daily Expense') {
+                wagesFields.style.display = 'none';
+                dailyExpenseFields.style.display = 'block';
+                purchasesFields.style.display = 'none';
+                amountField.readOnly = true;
+                amountField.value = '';
+                loadDailyExpensesForEntry();
+            } else if (this.value === 'Purchases') {
+                wagesFields.style.display = 'none';
+                dailyExpenseFields.style.display = 'none';
+                purchasesFields.style.display = 'block';
+                amountField.readOnly = true;
+                amountField.value = '';
+                initializePurchasesForm();
             } else {
                 wagesFields.style.display = 'none';
+                dailyExpenseFields.style.display = 'none';
+                purchasesFields.style.display = 'none';
                 amountField.readOnly = false;
                 // Clear wages input fields but keep entries in memory
                 document.getElementById('wagesEmployee').value = '';
                 document.getElementById('wagesRatePerDay').value = '';
                 document.getElementById('wagesDays').value = '';
+                document.getElementById('wagesOvertimeHours').value = '';
+                document.getElementById('wagesOvertimeAmount').value = '';
                 document.getElementById('wagesTotalAmount').value = '';
                 amountField.value = '';
-                // Note: wagesEntries are NOT cleared here - they persist until Submit Transaction
+                // Note: wagesEntries, selectedDailyExpenses, and purchaseItems are NOT cleared here - they persist until Submit Transaction
+            }
+        });
+
+        // Initialize purchases form
+        function initializePurchasesForm() {
+            // Generate reference number
+            document.getElementById('purchasesReference').value = generatePurchaseReference();
+            // Reset purchase items table to have one empty row
+            const tbody = document.getElementById('purchasesItemsTableBody');
+            tbody.innerHTML = `
+                <tr class="purchase-item-row">
+                    <td><input type="text" class="form-control form-control-sm purchase-desc" placeholder="Description"></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm purchase-qty" placeholder="0" min="0"></td>
+                    <td><input type="text" class="form-control form-control-sm purchase-unit" placeholder="Unit"></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm purchase-unit-price" placeholder="0.00" min="0"></td>
+                    <td><input type="text" class="form-control form-control-sm purchase-amount" placeholder="0.00" readonly></td>
+                    <td><button type="button" class="btn btn-sm btn-danger delete-purchase-item" style="display: none;">Delete</button></td>
+                </tr>
+            `;
+            // Attach event listeners to the new row
+            attachPurchaseRowListeners(tbody.querySelector('.purchase-item-row'));
+            purchaseItems = [];
+            updatePurchasesEntriesTable();
+            updatePurchasesTotal();
+        }
+
+        // Attach event listeners to a purchase row
+        function attachPurchaseRowListeners(row) {
+            const qtyInput = row.querySelector('.purchase-qty');
+            const unitPriceInput = row.querySelector('.purchase-unit-price');
+            const descInput = row.querySelector('.purchase-desc');
+            const unitInput = row.querySelector('.purchase-unit');
+            const amountInput = row.querySelector('.purchase-amount');
+            const deleteBtn = row.querySelector('.delete-purchase-item');
+
+            // Calculate amount when qty or unit price changes
+            function calculateRowAmount() {
+                const qty = parseFloat(qtyInput.value) || 0;
+                const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                const amount = qty * unitPrice;
+                amountInput.value = formatAmount(amount);
+                updatePurchasesTotal();
+            }
+
+            qtyInput.addEventListener('input', calculateRowAmount);
+            unitPriceInput.addEventListener('input', calculateRowAmount);
+
+            // When Enter is pressed on description, move focus to qty
+            descInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    qtyInput.focus();
+                    qtyInput.select(); // Select the value for easy editing
+                }
+            });
+
+            // When Enter is pressed on qty, move focus to unit
+            qtyInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    unitInput.focus();
+                    unitInput.select();
+                }
+            });
+
+            // When Enter is pressed on unit, move focus to unit_price
+            unitInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    unitPriceInput.focus();
+                    unitPriceInput.select();
+                }
+            });
+
+            // When Enter is pressed on unit_price, add new row
+            unitPriceInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // Only add new row if current row has valid data
+                    const desc = descInput.value.trim();
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const unit = unitInput.value.trim();
+                    const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                    
+                    if (desc && qty > 0 && unitPrice > 0) {
+                        // Check if this row is already saved (has data-index)
+                        const rowIndex = row.getAttribute('data-index');
+                        if (rowIndex === null || rowIndex === '') {
+                            // Save current row to purchaseItems (but keep the row visible with its data)
+                            addPurchaseItemToArray(desc, qty, unit, unitPrice);
+                            row.setAttribute('data-index', purchaseItems.length - 1);
+                            // Make inputs readonly or disabled to show they're saved (optional - or keep editable)
+                            // For now, keep them editable but mark as saved
+                            updatePurchasesEntriesTable();
+                            updatePurchasesTotal();
+                            updatePurchaseDeleteButtons();
+                        }
+                        // DON'T clear current row - keep its entries visible
+                        // Add new blank row below
+                        addNewPurchaseRow();
+                        // Focus on description of new row
+                        setTimeout(() => {
+                            const newRow = document.querySelector('.purchase-item-row:last-child');
+                            if (newRow) {
+                                newRow.querySelector('.purchase-desc').focus();
+                            }
+                        }, 10);
+                    }
+                }
+            });
+
+            // Delete button
+            deleteBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const index = parseInt(row.getAttribute('data-index'));
+                if (index >= 0 && index < purchaseItems.length) {
+                    purchaseItems.splice(index, 1);
+                    row.remove();
+                    reindexPurchaseRows();
+                    updatePurchaseDeleteButtons();
+                    updatePurchasesEntriesTable();
+                    updatePurchasesTotal();
+                } else {
+                    // If not in array, just remove the row
+                    row.remove();
+                    updatePurchaseDeleteButtons();
+                    updatePurchasesTotal();
+                }
+            });
+        }
+
+        // Add purchase item to array
+        function addPurchaseItemToArray(desc, qty, unit, unitPrice) {
+            purchaseItems.push({
+                description: desc,
+                qty: qty,
+                unit: unit,
+                unit_price: unitPrice,
+                amount: qty * unitPrice
+            });
+        }
+
+        // Add new purchase row
+        function addNewPurchaseRow() {
+            const tbody = document.getElementById('purchasesItemsTableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'purchase-item-row';
+            newRow.innerHTML = `
+                <td><input type="text" class="form-control form-control-sm purchase-desc" placeholder="Description"></td>
+                <td><input type="number" step="0.01" class="form-control form-control-sm purchase-qty" placeholder="0" min="0"></td>
+                <td><input type="text" class="form-control form-control-sm purchase-unit" placeholder="Unit"></td>
+                <td><input type="number" step="0.01" class="form-control form-control-sm purchase-unit-price" placeholder="0.00" min="0"></td>
+                <td><input type="text" class="form-control form-control-sm purchase-amount" placeholder="0.00" readonly></td>
+                <td><button type="button" class="btn btn-sm btn-danger delete-purchase-item">Delete</button></td>
+            `;
+            tbody.appendChild(newRow);
+            attachPurchaseRowListeners(newRow);
+            // Show delete buttons on all rows except the last one
+            updatePurchaseDeleteButtons();
+        }
+
+        // Reindex purchase rows
+        function reindexPurchaseRows() {
+            const rows = document.querySelectorAll('.purchase-item-row');
+            rows.forEach((row, index) => {
+                row.setAttribute('data-index', index);
+            });
+        }
+
+        // Update delete buttons visibility
+        function updatePurchaseDeleteButtons() {
+            const rows = document.querySelectorAll('.purchase-item-row');
+            rows.forEach((row, index) => {
+                const deleteBtn = row.querySelector('.delete-purchase-item');
+                if (rows.length > 1) {
+                    deleteBtn.style.display = '';
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+            });
+        }
+
+        // Update purchases entries table (right side card)
+        function updatePurchasesEntriesTable() {
+            const tbody = document.getElementById('purchasesEntriesTableBody');
+            tbody.innerHTML = '';
+            
+            if (purchaseItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-2" style="font-size: 0.85rem;">No items yet</td></tr>';
+                return;
+            }
+            
+            purchaseItems.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.description}</td>
+                    <td class="text-end">${formatAmount(item.amount)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update purchases total
+        function updatePurchasesTotal() {
+            // Calculate total from purchaseItems array
+            const total = purchaseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+            document.getElementById('purchasesTotalAmount').value = formatAmount(total);
+            document.getElementById('purchasesGrandTotal').textContent = formatAmount(total);
+        }
+
+        // Load daily expenses for entry form
+        async function loadDailyExpensesForEntry() {
+            try {
+                const response = await fetch('{{ url_for("carenderia.get_daily_expenses") }}');
+                const data = await response.json();
+                if (data.success && data.expenses) {
+                    // Initialize selectedDailyExpenses with all expenses that have amount > 0
+                    selectedDailyExpenses = data.expenses
+                        .filter(exp => parseFloat(exp.amount || 0) > 0)
+                        .map(exp => ({
+                            expense_type: exp.expense_type,
+                            amount: parseFloat(exp.amount || 0)
+                        }));
+                    renderDailyExpenseEntriesTable();
+                    updateDailyExpenseGrandTotal();
+                } else {
+                    selectedDailyExpenses = [];
+                    renderDailyExpenseEntriesTable();
+                }
+            } catch (error) {
+                console.error('Error loading daily expenses:', error);
+                selectedDailyExpenses = [];
+                renderDailyExpenseEntriesTable();
+            }
+        }
+
+        function renderDailyExpenseEntriesTable() {
+            const tbody = document.getElementById('dailyExpenseEntriesTableBody');
+            tbody.innerHTML = '';
+            
+            if (selectedDailyExpenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2" style="font-size: 0.85rem;">No daily expenses with amount > 0</td></tr>';
+                return;
+            }
+            
+            selectedDailyExpenses.forEach((expense, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${expense.expense_type}</td>
+                    <td class="text-end">${parseFloat(expense.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger delete-daily-expense-btn" data-index="${index}">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateDailyExpenseGrandTotal() {
+            const total = selectedDailyExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+            document.getElementById('dailyExpenseGrandTotal').textContent = formatAmount(total);
+        }
+
+        // Delete daily expense from selected list
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-daily-expense-btn')) {
+                const index = parseInt(e.target.getAttribute('data-index'));
+                selectedDailyExpenses.splice(index, 1);
+                renderDailyExpenseEntriesTable();
+                updateDailyExpenseGrandTotal();
             }
         });
 
@@ -546,15 +948,30 @@
             calculateWagesTotal();
         });
 
-        // Auto-calculate total amount when days or rate changes
+        // Auto-calculate total amount when days, rate, or overtime hours changes
         document.getElementById('wagesDays').addEventListener('input', calculateWagesTotal);
         document.getElementById('wagesRatePerDay').addEventListener('input', calculateWagesTotal);
+        document.getElementById('wagesOvertimeHours').addEventListener('input', calculateWagesTotal);
 
         function calculateWagesTotal() {
-            const ratePerDay = parseFloat(document.getElementById('wagesRatePerDay').value) || 0;
+            // Parse ratePerDay, removing commas from formatted string
+            const ratePerDayStr = document.getElementById('wagesRatePerDay').value.replace(/,/g, '');
+            const ratePerDay = parseFloat(ratePerDayStr) || 0;
             const days = parseFloat(document.getElementById('wagesDays').value) || 0;
-            const totalAmount = ratePerDay * days;
+            const overtimeHours = parseFloat(document.getElementById('wagesOvertimeHours').value) || 0;
             
+            // Calculate overtime amount: (rate_per_day / 8 hours) * overtime_hours
+            const ratePerHour = ratePerDay / 8;
+            const overtimeAmount = ratePerHour * overtimeHours;
+            
+            // Calculate total amount: (rate_per_day * days) + overtime_amount
+            const regularAmount = ratePerDay * days;
+            const totalAmount = regularAmount + overtimeAmount;
+            
+            // Update overtime amount field (use text input, so formatAmount with commas works)
+            document.getElementById('wagesOvertimeAmount').value = formatAmount(overtimeAmount);
+            
+            // Update total amount field (use text input, so formatAmount with commas works)
             document.getElementById('wagesTotalAmount').value = formatAmount(totalAmount);
             updateWagesGrandTotal();
         }
@@ -567,8 +984,12 @@
             const employeeName = employeeSelect.options[employeeSelect.selectedIndex].text;
             const employeeDeptId = employeeSelect.options[employeeSelect.selectedIndex].getAttribute('data-dept-id') || null;
             const employeeRole = employeeSelect.options[employeeSelect.selectedIndex].getAttribute('data-role') || null;
-            const ratePerDay = parseFloat(document.getElementById('wagesRatePerDay').value) || 0;
+            const ratePerDay = parseFloat(document.getElementById('wagesRatePerDay').value.replace(/,/g, '')) || 0;
             const days = parseFloat(document.getElementById('wagesDays').value) || 0;
+            const overtimeHours = parseFloat(document.getElementById('wagesOvertimeHours').value) || 0;
+            // Parse overtime amount, removing commas from formatted string
+            const overtimeAmountStr = document.getElementById('wagesOvertimeAmount').value.replace(/,/g, '');
+            const overtimeAmount = parseFloat(overtimeAmountStr) || 0;
             
             if (!entryDate) {
                 alert('Please select a date first.');
@@ -580,19 +1001,23 @@
                 return;
             }
             
-            if (days <= 0) {
-                alert('Please enter a valid number of days.');
+            if (days <= 0 && overtimeHours <= 0) {
+                alert('Please enter a valid number of days or overtime hours.');
                 return;
             }
             
             // Check if employee already exists
             const existingIndex = wagesEntries.findIndex(e => e.employeeId === parseInt(employeeId));
-            const totalAmount = ratePerDay * days;
+            // Total amount includes overtime: (rate_per_day * days) + overtime_amount
+            const regularAmount = ratePerDay * days;
+            const totalAmount = regularAmount + overtimeAmount;
             
             if (existingIndex >= 0) {
                 // Update existing entry
                 wagesEntries[existingIndex].ratePerDay = ratePerDay;
                 wagesEntries[existingIndex].days = days;
+                wagesEntries[existingIndex].overtimeHours = overtimeHours;
+                wagesEntries[existingIndex].overtimeAmount = overtimeAmount;
                 wagesEntries[existingIndex].totalAmount = totalAmount;
                 wagesEntries[existingIndex].departmentId = employeeDeptId ? parseInt(employeeDeptId) : null;
                 wagesEntries[existingIndex].employeeRole = employeeRole;
@@ -607,6 +1032,8 @@
                     employeeRole: employeeRole,
                     ratePerDay: ratePerDay,
                     days: days,
+                    overtimeHours: overtimeHours,
+                    overtimeAmount: overtimeAmount,
                     totalAmount: totalAmount,
                     date: entryDate
                 });
@@ -618,6 +1045,8 @@
             employeeSelect.value = '';
             document.getElementById('wagesRatePerDay').value = '';
             document.getElementById('wagesDays').value = '';
+            document.getElementById('wagesOvertimeHours').value = '';
+            document.getElementById('wagesOvertimeAmount').value = '';
             document.getElementById('wagesTotalAmount').value = '';
         });
 
@@ -666,7 +1095,7 @@
         }
 
         // Define expense types (for calculating cash out)
-        const expenseTypes = ['Wages', 'Electric Bill', 'Water Bill', 'Maintenance', 'Mayor\'s Permit', 'Rental', 'BIR', 'SSS', 'PAG-IBIG', 'Purchases'];
+        const expenseTypes = ['Daily Expense', 'Purchases', 'Wages'];
         const incomeTypes = ['Daily Sales'];
 
         // Check if transaction type is an expense
@@ -711,16 +1140,9 @@
         function updateRunningBalance() {
             // Calculate totals by transaction type
             let dailyCollection = 0;
-            let wages = 0;
-            let electricBill = 0;
-            let waterBill = 0;
-            let maintenance = 0;
-            let mayorsPermit = 0;
-            let rental = 0;
-            let bir = 0;
-            let sss = 0;
-            let pagIbig = 0;
+            let dailyExpense = 0;
             let purchases = 0;
+            let wages = 0;
 
             transactions.forEach(trans => {
                 const amount = parseFloat(trans.amount) || 0;
@@ -728,47 +1150,25 @@
 
                 if (type === 'Daily Sales') {
                     dailyCollection += amount;
-                } else if (type === 'Wages') {
-                    wages += amount;
-                } else if (type === 'Electric Bill') {
-                    electricBill += amount;
-                } else if (type === 'Water Bill') {
-                    waterBill += amount;
-                } else if (type === 'Maintenance') {
-                    maintenance += amount;
-                } else if (type === 'Mayor\'s Permit') {
-                    mayorsPermit += amount;
-                } else if (type === 'Rental') {
-                    rental += amount;
-                } else if (type === 'BIR') {
-                    bir += amount;
-                } else if (type === 'SSS') {
-                    sss += amount;
-                } else if (type === 'PAG-IBIG') {
-                    pagIbig += amount;
+                } else if (type === 'Daily Expense') {
+                    dailyExpense += amount;
                 } else if (type === 'Purchases') {
                     purchases += amount;
+                } else if (type === 'Wages') {
+                    wages += amount;
                 }
             });
 
-            const totalDeductions = wages + electricBill + waterBill + maintenance + 
-                                   mayorsPermit + rental + bir + sss + pagIbig + purchases;
+            const totalDeductions = dailyExpense + purchases + wages;
             const netAmount = dailyCollection - totalDeductions;
 
             // Update running balance display
             document.getElementById('runningDailyCollection').textContent = formatAmount(dailyCollection);
             
             // Update deduction amounts and show/hide rows based on amount
-            updateDeductionRow('rowDeductionWages', 'deductionWages', wages);
-            updateDeductionRow('rowDeductionElectricBill', 'deductionElectricBill', electricBill);
-            updateDeductionRow('rowDeductionWaterBill', 'deductionWaterBill', waterBill);
-            updateDeductionRow('rowDeductionMaintenance', 'deductionMaintenance', maintenance);
-            updateDeductionRow('rowDeductionMayorsPermit', 'deductionMayorsPermit', mayorsPermit);
-            updateDeductionRow('rowDeductionRental', 'deductionRental', rental);
-            updateDeductionRow('rowDeductionBIR', 'deductionBIR', bir);
-            updateDeductionRow('rowDeductionSSS', 'deductionSSS', sss);
-            updateDeductionRow('rowDeductionPAGIBIG', 'deductionPAGIBIG', pagIbig);
+            updateDeductionRow('rowDeductionDailyExpense', 'deductionDailyExpense', dailyExpense);
             updateDeductionRow('rowDeductionPurchases', 'deductionPurchases', purchases);
+            updateDeductionRow('rowDeductionWages', 'deductionWages', wages);
             
             document.getElementById('runningTotalDeductions').textContent = formatAmount(totalDeductions);
             document.getElementById('runningNetAmount').textContent = formatAmount(netAmount);
@@ -826,6 +1226,108 @@
                 return;
             }
 
+            // Handle Daily Expense: add each selected expense as a transaction
+            if (transactionType === 'Daily Expense') {
+                if (selectedDailyExpenses.length === 0) {
+                    alert('No daily expenses selected. Please ensure there are expenses with amount > 0.');
+                    return;
+                }
+                
+                // Add each daily expense as a separate transaction
+                let nextId = transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
+                selectedDailyExpenses.forEach(expense => {
+                    const transaction = {
+                        id: nextId++,
+                        date: entryDate,
+                        transactionType: 'Daily Expense',
+                        amount: expense.amount,
+                        expenseType: expense.expense_type // Store for display
+                    };
+                    transactions.push(transaction);
+                });
+                
+                recalculateCashOnHand();
+                updateTransactionsTable();
+                updateSummaryPanels();
+                this.reset();
+                
+                // Reset daily expense fields
+                document.getElementById('dailyExpenseFields').style.display = 'none';
+                document.getElementById('amount').readOnly = false;
+                document.getElementById('transactionType').value = '';
+                // Clear selected expenses after adding to transactions
+                selectedDailyExpenses = [];
+                renderDailyExpenseEntriesTable();
+                updateDailyExpenseGrandTotal();
+                return;
+            }
+
+            // Handle Purchases: add as one transaction with items
+            if (transactionType === 'Purchases') {
+                // Collect items from current form rows (including the one being edited)
+                const rows = document.querySelectorAll('.purchase-item-row');
+                const currentItems = [];
+                rows.forEach(row => {
+                    const desc = row.querySelector('.purchase-desc').value.trim();
+                    const qty = parseFloat(row.querySelector('.purchase-qty').value) || 0;
+                    const unit = row.querySelector('.purchase-unit').value.trim();
+                    const unitPrice = parseFloat(row.querySelector('.purchase-unit-price').value) || 0;
+                    
+                    // Only add if row has valid data
+                    if (desc && qty > 0 && unitPrice > 0) {
+                        // Check if this row is already in purchaseItems (has data-index)
+                        const rowIndex = row.getAttribute('data-index');
+                        if (rowIndex === null || rowIndex === '') {
+                            // New item, add to currentItems
+                            currentItems.push({
+                                description: desc,
+                                qty: qty,
+                                unit: unit,
+                                unit_price: unitPrice,
+                                amount: qty * unitPrice
+                            });
+                        }
+                        // If rowIndex exists, it's already in purchaseItems, skip
+                    }
+                });
+                
+                // Merge with existing purchaseItems
+                const allItems = [...purchaseItems, ...currentItems];
+                
+                if (allItems.length === 0) {
+                    alert('Please add at least one purchase item.');
+                    return;
+                }
+                
+                const referenceNumber = document.getElementById('purchasesReference').value;
+                const totalAmount = allItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                
+                // Add as ONE transaction with items stored
+                const transaction = {
+                    id: transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1,
+                    date: entryDate,
+                    transactionType: 'Purchases',
+                    amount: totalAmount,
+                    referenceNumber: referenceNumber,
+                    items: allItems // Store items for expansion
+                };
+                
+                transactions.push(transaction);
+                recalculateCashOnHand();
+                updateTransactionsTable();
+                updateSummaryPanels();
+                this.reset();
+                
+                // Reset purchases fields
+                document.getElementById('purchasesFields').style.display = 'none';
+                document.getElementById('amount').readOnly = false;
+                document.getElementById('transactionType').value = '';
+                purchaseItems = [];
+                purchaseReferenceCounter++;
+                initializePurchasesForm();
+                return;
+            }
+
             // Validate wages fields if transaction type is Wages
             if (transactionType === 'Wages') {
                 if (wagesEntries.length === 0) {
@@ -850,6 +1352,12 @@
                 amount: amount
             };
 
+            // For Wages, store the wage entries with the transaction
+            if (transactionType === 'Wages') {
+                // Create a copy of wagesEntries to store with this transaction
+                transaction.wageEntries = JSON.parse(JSON.stringify(wagesEntries));
+            }
+
             transactions.push(transaction);
             recalculateCashOnHand();
             updateTransactionsTable();
@@ -858,16 +1366,19 @@
             
             // Reset wages fields visibility
             if (transactionType === 'Wages') {
-                // For Wages, hide the fields but keep entries in memory
+                // For Wages, hide the fields but keep entries in memory for next transaction
                 document.getElementById('wagesFields').style.display = 'none';
                 document.getElementById('amount').readOnly = false;
-                // Clear the input fields but keep wagesEntries
+                // Clear the input fields but keep wagesEntries for potential next transaction
                 document.getElementById('wagesEmployee').value = '';
                 document.getElementById('wagesRatePerDay').value = '';
                 document.getElementById('wagesDays').value = '';
+                document.getElementById('wagesOvertimeHours').value = '';
+                document.getElementById('wagesOvertimeAmount').value = '';
                 document.getElementById('wagesTotalAmount').value = '';
                 // Reset transaction type dropdown
                 document.getElementById('transactionType').value = '';
+                // Note: wagesEntries are kept in memory for potential next Wages transaction
             } else {
                 document.getElementById('wagesFields').style.display = 'none';
                 document.getElementById('amount').readOnly = false;
@@ -927,11 +1438,42 @@
             sortedTransactions.forEach(trans => {
                 const amount = parseFloat(trans.amount) || 0;
                 const type = trans.transactionType;
+                // For Daily Expense, show the expense type name
+                const displayType = (type === 'Daily Expense' && trans.expenseType) 
+                    ? `${type} (${trans.expenseType})` 
+                    : type;
+                
+                // For Purchases, show reference number
+                const displayTypeWithRef = (type === 'Purchases' && trans.referenceNumber)
+                    ? `${type} (${trans.referenceNumber})`
+                    : displayType;
 
                 const row = document.createElement('tr');
+                row.className = 'transaction-row';
+                row.setAttribute('data-transaction-id', trans.id);
+                
+                // Make Purchases and Wages rows clickable
+                if ((type === 'Purchases' && trans.items && trans.items.length > 0) ||
+                    (type === 'Wages' && trans.wageEntries && trans.wageEntries.length > 0)) {
+                    row.style.cursor = 'pointer';
+                    if (type === 'Purchases') {
+                        row.classList.add('purchases-expandable');
+                    } else if (type === 'Wages') {
+                        row.classList.add('wages-expandable');
+                    }
+                }
+                
+                // Add chevron icon for expandable rows
+                let chevronIcon = '';
+                if (type === 'Purchases' && trans.items && trans.items.length > 0) {
+                    chevronIcon = '<i class="bi bi-chevron-down ms-1"></i>';
+                } else if (type === 'Wages' && trans.wageEntries && trans.wageEntries.length > 0) {
+                    chevronIcon = '<i class="bi bi-chevron-down ms-1"></i>';
+                }
+                
                 row.innerHTML = `
                     <td>${new Date(trans.date).toLocaleDateString()}</td>
-                    <td>${type}</td>
+                    <td>${displayTypeWithRef}${chevronIcon}</td>
                     <td class="fw-bold">${formatAmount(amount)}</td>
                     <td>
                         <button class="btn btn-sm btn-warning edit-transaction me-1" data-id="${trans.id}">Edit</button>
@@ -939,6 +1481,138 @@
                     </td>
                 `;
                 tbody.appendChild(row);
+                
+                // Add expandable items row for Purchases
+                if (type === 'Purchases' && trans.items && trans.items.length > 0) {
+                    const itemsRow = document.createElement('tr');
+                    itemsRow.className = 'purchases-items-row';
+                    itemsRow.style.display = 'none';
+                    itemsRow.setAttribute('data-transaction-id', trans.id);
+                    itemsRow.innerHTML = `
+                        <td colspan="4" class="p-3 bg-light">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-danger">
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Qty</th>
+                                        <th>Unit</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${trans.items.map(item => `
+                                        <tr>
+                                            <td>${item.description || ''}</td>
+                                            <td>${parseFloat(item.qty || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td>${item.unit || ''}</td>
+                                            <td class="text-end">${formatAmount(item.unit_price || 0)}</td>
+                                            <td class="text-end fw-bold">${formatAmount(item.amount || 0)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </td>
+                    `;
+                    tbody.appendChild(itemsRow);
+                }
+                
+                // Add expandable wage entries row for Wages
+                if (type === 'Wages' && trans.wageEntries && trans.wageEntries.length > 0) {
+                    const itemsRow = document.createElement('tr');
+                    itemsRow.className = 'wages-items-row';
+                    itemsRow.style.display = 'none';
+                    itemsRow.setAttribute('data-transaction-id', trans.id);
+                    itemsRow.innerHTML = `
+                        <td colspan="4" class="p-3 bg-light">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-danger">
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th class="text-end">Rate/Day</th>
+                                        <th class="text-end">Days</th>
+                                        <th class="text-end">Overtime Hours</th>
+                                        <th class="text-end">Overtime Amount</th>
+                                        <th class="text-end">Total Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${trans.wageEntries.map(entry => `
+                                        <tr>
+                                            <td>${entry.employeeName || ''}</td>
+                                            <td class="text-end">${formatAmount(entry.ratePerDay || 0)}</td>
+                                            <td class="text-end">${parseFloat(entry.days || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td class="text-end">${parseFloat(entry.overtimeHours || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td class="text-end">${formatAmount(entry.overtimeAmount || 0)}</td>
+                                            <td class="text-end fw-bold">${formatAmount(entry.totalAmount || 0)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </td>
+                    `;
+                    tbody.appendChild(itemsRow);
+                }
+            });
+            
+            // Add click handlers for expandable Purchases rows
+            document.querySelectorAll('.purchases-expandable').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    // Don't expand if clicking on buttons
+                    if (e.target.closest('button')) {
+                        return;
+                    }
+                    
+                    const transactionId = this.getAttribute('data-transaction-id');
+                    const itemsRow = document.querySelector(`.purchases-items-row[data-transaction-id="${transactionId}"]`);
+                    const chevron = this.querySelector('.bi-chevron-down, .bi-chevron-up');
+                    
+                    if (itemsRow) {
+                        if (itemsRow.style.display === 'none') {
+                            itemsRow.style.display = '';
+                            if (chevron) {
+                                chevron.classList.remove('bi-chevron-down');
+                                chevron.classList.add('bi-chevron-up');
+                            }
+                        } else {
+                            itemsRow.style.display = 'none';
+                            if (chevron) {
+                                chevron.classList.remove('bi-chevron-up');
+                                chevron.classList.add('bi-chevron-down');
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Add click handlers for expandable Wages rows
+            document.querySelectorAll('.wages-expandable').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    // Don't expand if clicking on buttons
+                    if (e.target.closest('button')) {
+                        return;
+                    }
+                    
+                    const transactionId = this.getAttribute('data-transaction-id');
+                    const itemsRow = document.querySelector(`.wages-items-row[data-transaction-id="${transactionId}"]`);
+                    const chevron = this.querySelector('.bi-chevron-down, .bi-chevron-up');
+                    
+                    if (itemsRow) {
+                        if (itemsRow.style.display === 'none') {
+                            itemsRow.style.display = '';
+                            if (chevron) {
+                                chevron.classList.remove('bi-chevron-down');
+                                chevron.classList.add('bi-chevron-up');
+                            }
+                        } else {
+                            itemsRow.style.display = 'none';
+                            if (chevron) {
+                                chevron.classList.remove('bi-chevron-up');
+                                chevron.classList.add('bi-chevron-down');
+                            }
+                        }
+                    }
+                });
             });
 
             // Add edit event listeners
@@ -978,6 +1652,8 @@
                 document.getElementById('wagesEmployee').value = '';
                 document.getElementById('wagesRatePerDay').value = '';
                 document.getElementById('wagesDays').value = '';
+                document.getElementById('wagesOvertimeHours').value = '';
+                document.getElementById('wagesOvertimeAmount').value = '';
                 document.getElementById('wagesTotalAmount').value = '';
             } else {
                 document.getElementById('wagesFields').style.display = 'none';
@@ -985,6 +1661,8 @@
                 document.getElementById('wagesEmployee').value = '';
                 document.getElementById('wagesRatePerDay').value = '';
                 document.getElementById('wagesDays').value = '';
+                document.getElementById('wagesOvertimeHours').value = '';
+                document.getElementById('wagesOvertimeAmount').value = '';
                 document.getElementById('wagesTotalAmount').value = '';
             }
             // Note: wagesEntries are NOT cleared on form reset - they persist until Submit Transaction
