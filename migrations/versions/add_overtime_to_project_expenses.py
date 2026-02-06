@@ -1,6 +1,6 @@
 """add overtime_hours and overtime_amount to project_expenses
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 785f32636787
 Revises: e749b01e5ffd
 Create Date: 2026-02-05
 
@@ -9,7 +9,7 @@ from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision = "a1b2c3d4e5f6"
+revision = "785f32636787"
 down_revision = "e749b01e5ffd"
 branch_labels = None
 depends_on = None
