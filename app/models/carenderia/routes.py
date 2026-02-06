@@ -4,7 +4,7 @@ from app.models.core import Employee, Department
 from app.extensions import db
 from sqlalchemy.orm import joinedload
 from . import carenderia_bp
-from .models import CarenderiaWage, CarenderiaTransaction
+from .models import CarenderiaWage, CarenderiaTransaction, CarenderiaDailyExpense
 from datetime import datetime, date
 from sqlalchemy import extract, func
 import calendar
@@ -955,3 +955,103 @@ def export_trial_balance_pdf():
         as_attachment=True,
         download_name=filename
     )
+
+
+@carenderia_bp.route("/get-daily-expenses")
+@login_required
+@department_required("Carenderia", "Corporate")
+def get_daily_expenses():
+    """Get all daily expense types and their amounts."""
+    try:
+        # Initialize default expense types if they don't exist
+        default_expense_types = [
+            "Electric Bill",
+            "Water Bill",
+            "Maintenance",
+            "Mayor's Permit",
+            "Rental",
+            "BIR",
+            "SSS",
+            "PAG-IBIG"
+        ]
+        
+        for exp_type in default_expense_types:
+            existing = CarenderiaDailyExpense.query.filter_by(expense_type=exp_type).first()
+            if not existing:
+                new_expense = CarenderiaDailyExpense(expense_type=exp_type, amount=0)
+                db.session.add(new_expense)
+        
+        db.session.commit()
+        
+        # Return all expenses (including any custom ones added by users)
+        all_expenses = CarenderiaDailyExpense.query.order_by(CarenderiaDailyExpense.expense_type.asc()).all()
+        expenses = []
+        for expense in all_expenses:
+            expenses.append({
+                "id": expense.id,
+                "expense_type": expense.expense_type,
+                "amount": float(expense.amount) if expense.amount else 0.0
+            })
+        
+        return jsonify({"success": True, "expenses": expenses})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error loading expenses: {str(e)}"}), 500
+
+
+@carenderia_bp.route("/update-daily-expense/<int:expense_id>", methods=["POST"])
+@login_required
+@department_required("Carenderia", "Corporate")
+def update_daily_expense(expense_id):
+    """Update a daily expense amount."""
+    data = request.get_json()
+    amount = data.get("amount", 0)
+    
+    try:
+        amount = float(amount)
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "Invalid amount"}), 400
+    
+    expense = CarenderiaDailyExpense.query.get_or_404(expense_id)
+    expense.amount = amount
+    expense.updated_at = datetime.now()
+    db.session.commit()
+    
+    return jsonify({"success": True, "message": "Expense updated successfully"})
+
+
+@carenderia_bp.route("/add-daily-expense", methods=["POST"])
+@login_required
+@department_required("Carenderia", "Corporate")
+def add_daily_expense():
+    """Add a new daily expense type."""
+    data = request.get_json()
+    expense_type = data.get("expense_type", "").strip()
+    amount = data.get("amount", 0)
+    
+    if not expense_type:
+        return jsonify({"success": False, "message": "Expense type is required"}), 400
+    
+    # Check if expense type already exists
+    existing = CarenderiaDailyExpense.query.filter_by(expense_type=expense_type).first()
+    if existing:
+        return jsonify({"success": False, "message": "Expense type already exists"}), 400
+    
+    try:
+        amount = float(amount) if amount else 0.0
+    except (ValueError, TypeError):
+        amount = 0.0
+    
+    new_expense = CarenderiaDailyExpense(expense_type=expense_type, amount=amount)
+    db.session.add(new_expense)
+    db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "message": "Expense added successfully",
+        "expense": {
+            "id": new_expense.id,
+            "expense_type": new_expense.expense_type,
+            "amount": float(new_expense.amount) if new_expense.amount else 0.0
+        }
+    })

@@ -56,3 +56,12 @@ class CarenderiaTransaction(db.Model):
     trans_type = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Numeric(14, 2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+class CarenderiaDailyExpense(db.Model):
+    __tablename__ = "carenderia_daily_expenses"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    expense_type = db.Column(db.String(100), nullable=False, unique=True)
+    amount = db.Column(db.Numeric(14, 2), default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)

@@ -112,6 +112,11 @@
                                     Manage Workers
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#manageDailyExpenseModal">
+                                    Manage Daily Expense
+                                </a>
+                            </li>
                         </ul>
                     </li>
 
@@ -1062,7 +1067,317 @@
         
         // Load employees on page load
         loadCarenderiaEmployees();
+
+        // Manage Daily Expense Modal - Initialize after DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const manageDailyExpenseModal = document.getElementById('manageDailyExpenseModal');
+            if (!manageDailyExpenseModal) {
+                console.error('manageDailyExpenseModal not found');
+                return;
+            }
+
+            let dailyExpenses = [];
+
+            async function loadDailyExpenses() {
+                try {
+                    const tbody = document.getElementById('dailyExpensesTableBody');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="2" class="text-center">Loading...</td></tr>';
+                    }
+                    
+                    const url = '{{ url_for("carenderia.get_daily_expenses") }}';
+                    console.log('Fetching daily expenses from:', url);
+                    
+                    const response = await fetch(url);
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Response error:', errorText);
+                        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Daily expenses response:', data);
+                    
+                    if (data.success && data.expenses) {
+                        dailyExpenses = data.expenses;
+                        console.log('Loaded', dailyExpenses.length, 'expenses');
+                        renderDailyExpensesTable();
+                    } else {
+                        console.error('Failed to load expenses:', data);
+                        if (tbody) {
+                            tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Error: ' + (data.message || 'Failed to load expenses') + '</td></tr>';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading daily expenses:', error);
+                    const tbody = document.getElementById('dailyExpensesTableBody');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Error loading expenses: ' + error.message + '</td></tr>';
+                    }
+                }
+            }
+
+            function renderDailyExpensesTable() {
+                const tbody = document.getElementById('dailyExpensesTableBody');
+                if (!tbody) return;
+                
+                tbody.innerHTML = '';
+                if (dailyExpenses.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No expenses found.</td></tr>';
+                    return;
+                }
+                
+                dailyExpenses.forEach(expense => {
+                    const row = document.createElement('tr');
+                    row.style.cursor = 'pointer';
+                    row.onclick = () => editDailyExpense(expense);
+                    row.innerHTML = `
+                        <td>${expense.expense_type}</td>
+                        <td class="text-end">${parseFloat(expense.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            function editDailyExpense(expense) {
+                const editExpenseId = document.getElementById('editExpenseId');
+                const editExpenseType = document.getElementById('editExpenseType');
+                const editExpenseAmount = document.getElementById('editExpenseAmount');
+                
+                if (editExpenseId) editExpenseId.value = expense.id;
+                if (editExpenseType) editExpenseType.value = expense.expense_type;
+                if (editExpenseAmount) editExpenseAmount.value = expense.amount || 0;
+                
+                const editModalEl = document.getElementById('editDailyExpenseModal');
+                if (editModalEl) {
+                    const editModal = new bootstrap.Modal(editModalEl);
+                    editModal.show();
+                }
+            }
+
+            // Load expenses when modal is shown
+            manageDailyExpenseModal.addEventListener('show.bs.modal', function() {
+                loadDailyExpenses();
+            });
+
+            // Save expense button
+            const saveExpenseBtn = document.getElementById('saveExpenseBtn');
+            if (saveExpenseBtn) {
+                saveExpenseBtn.addEventListener('click', async function() {
+                    const expenseId = document.getElementById('editExpenseId').value;
+                    const amount = parseFloat(document.getElementById('editExpenseAmount').value) || 0;
+                    
+                    try {
+                        const response = await fetch(`{{ url_for("carenderia.update_daily_expense", expense_id=0) }}`.replace('/0', `/${expenseId}`), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ amount: amount })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('editDailyExpenseModal')).hide();
+                            await loadDailyExpenses();
+                            alert('Expense updated successfully!');
+                        } else {
+                            alert(data.message || 'Failed to update expense.');
+                        }
+                    } catch (error) {
+                        console.error('Error updating expense:', error);
+                        alert('Error updating expense. Please try again.');
+                    }
+                });
+            }
+
+            // Open Add Expense modal from Manage modal
+            const openAddExpenseBtn = document.getElementById('openAddExpenseBtn');
+            console.log('openAddExpenseBtn found:', !!openAddExpenseBtn);
+            if (openAddExpenseBtn) {
+                openAddExpenseBtn.addEventListener('click', function(e) {
+                    console.log('+ Add Expense button clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    bootstrap.Modal.getInstance(manageDailyExpenseModal).hide();
+                    setTimeout(() => {
+                        const addModalEl = document.getElementById('addDailyExpenseModal');
+                        console.log('addDailyExpenseModal found:', !!addModalEl);
+                        if (addModalEl) {
+                            const addModal = new bootstrap.Modal(addModalEl);
+                            addModal.show();
+                        } else {
+                            alert('Add Expense modal not found. Please refresh the page.');
+                        }
+                    }, 300);
+                });
+            } else {
+                console.error('openAddExpenseBtn not found in DOM');
+            }
+
+            // Cancel Add Expense - return to Manage modal
+            const cancelAddExpenseBtn = document.getElementById('cancelAddExpenseBtn');
+            if (cancelAddExpenseBtn) {
+                cancelAddExpenseBtn.addEventListener('click', function() {
+                    bootstrap.Modal.getInstance(document.getElementById('addDailyExpenseModal')).hide();
+                    setTimeout(() => {
+                        const manageModal = new bootstrap.Modal(manageDailyExpenseModal);
+                        manageModal.show();
+                    }, 300);
+                });
+            }
+
+            // Add new expense
+            const addExpenseBtn = document.getElementById('addExpenseBtn');
+            console.log('addExpenseBtn found:', !!addExpenseBtn);
+            if (addExpenseBtn) {
+                addExpenseBtn.addEventListener('click', async function(e) {
+                    console.log('Add Expense button clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const expenseType = document.getElementById('addExpenseType');
+                    const expenseAmount = document.getElementById('addExpenseAmount');
+                    
+                    if (!expenseType || !expenseAmount) {
+                        alert('Form elements not found.');
+                        return;
+                    }
+                    
+                    const typeValue = expenseType.value.trim();
+                    const amountValue = parseFloat(expenseAmount.value) || 0;
+                    
+                    if (!typeValue) {
+                        alert('Please enter an expense type.');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('{{ url_for("carenderia.add_daily_expense") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                expense_type: typeValue,
+                                amount: amountValue 
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('addDailyExpenseModal')).hide();
+                            // Clear form
+                            expenseType.value = '';
+                            expenseAmount.value = '0';
+                            // Reload expenses list
+                            await loadDailyExpenses();
+                            // Reopen manage modal
+                            setTimeout(() => {
+                                const manageModal = new bootstrap.Modal(manageDailyExpenseModal);
+                                manageModal.show();
+                            }, 300);
+                            alert('Expense added successfully!');
+                        } else {
+                            alert(data.message || 'Failed to add expense.');
+                        }
+                    } catch (error) {
+                        console.error('Error adding expense:', error);
+                        alert('Error adding expense. Please try again.');
+                    }
+                });
+            }
+        });
     </script>
     {% endblock %}
+
+    <!-- Manage Daily Expense Modal -->
+    <div class="modal fade" id="manageDailyExpenseModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Manage Daily Expense</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Click on an expense row to edit its amount.</p>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Expense Type</th>
+                                    <th class="text-end">Amount (₱)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyExpensesTableBody">
+                                <tr>
+                                    <td colspan="2" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="openAddExpenseBtn">+ Add Expense</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Daily Expense Modal -->
+    <div class="modal fade" id="addDailyExpenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Add New Expense</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Expense Type</label>
+                        <input type="text" class="form-control" id="addExpenseType" placeholder="e.g., Internet Bill" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount (₱)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="addExpenseAmount" value="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelAddExpenseBtn">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="addExpenseBtn">Add Expense</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Daily Expense Modal -->
+    <div class="modal fade" id="editDailyExpenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Edit Daily Expense</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editExpenseId">
+                    <div class="mb-3">
+                        <label class="form-label">Expense Type</label>
+                        <input type="text" class="form-control" id="editExpenseType" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount (₱)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="editExpenseAmount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="saveExpenseBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
