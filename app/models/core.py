@@ -43,7 +43,7 @@ def dashboard():
             "name": "Carenderia",
             "url": "/carenderia",
             "icon": "bi-basket",
-            "color": "bg-success",
+            "color": "bg-danger",
             "description": "Track daily carenderia operations and sales."
         },
         {

@@ -3,7 +3,7 @@
 {% block content %}
 <!-- Title Card -->
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white">
+    <div class="card-header bg-danger text-white">
         <div class="d-flex justify-content-between align-items-center">
             <h3 class="mb-0">View/Edit Transactions</h3>
             <a href="{{ url_for('carenderia.carenderia_home') }}" class="btn btn-light btn-sm">
@@ -25,7 +25,7 @@
                 <input type="date" class="form-control" id="filterDate" name="filter_date">
             </div>
             <div class="col-md-4">
-                <button type="button" class="btn btn-success" id="loadTransactionsBtn">Load Transactions</button>
+                <button type="button" class="btn btn-danger" id="loadTransactionsBtn">Load Transactions</button>
                 <button type="button" class="btn btn-secondary" id="clearFilterBtn">Clear</button>
             </div>
         </div>
@@ -34,18 +34,18 @@
 
 <!-- Transactions Table Card -->
 <div class="card shadow-sm">
-    <div class="card-header bg-success text-white">
+    <div class="card-header bg-danger text-white">
         <h5 class="mb-0">Transactions</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-bordered table-sm align-middle mb-0" style="font-size: 0.85rem;">
-                <thead style="position: sticky; top: 0; z-index: 100; background-color: #d1e7dd;">
+                <thead style="position: sticky; top: 0; z-index: 100; background-color: #f8d7da;">
                     <tr>
-                        <th style="background-color: #d1e7dd;">Date</th>
-                        <th style="background-color: #d1e7dd;">Type</th>
-                        <th style="background-color: #d1e7dd;">Amount</th>
-                        <th style="background-color: #d1e7dd;">Actions</th>
+                        <th style="background-color: #f8d7da;">Date</th>
+                        <th style="background-color: #f8d7da;">Type</th>
+                        <th style="background-color: #f8d7da;">Amount</th>
+                        <th style="background-color: #f8d7da;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="transactionsTableBody">
@@ -60,7 +60,7 @@
 
 <!-- Running Balance Card -->
 <div class="card mt-4 shadow-sm">
-    <div class="card-header bg-success text-white">
+    <div class="card-header bg-danger text-white">
         <h5 class="mb-0">Running Balance</h5>
     </div>
     <div class="card-body">
@@ -177,7 +177,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save Changes</button>
+                    <button type="submit" class="btn btn-danger">Save Changes</button>
                 </div>
             </form>
         </div>
