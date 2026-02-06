@@ -67,7 +67,9 @@ class ProjectExpense(db.Model):
     )
     rate_per_day = db.Column(db.Numeric(14, 2), nullable=True)
     days = db.Column(db.Numeric(12, 3), nullable=True)
-    labor_charge = db.Column(db.Numeric(14, 2))  # rate_per_day * days
+    labor_charge = db.Column(db.Numeric(14, 2))  # (rate_per_day * days) + overtime_amount
+    overtime_hours = db.Column(db.Numeric(12, 3), nullable=True)
+    overtime_amount = db.Column(db.Numeric(14, 2), nullable=True)  # (rate_per_day/8) * overtime_hours
 
     # -----------------------------
     # GASOLINE FIELDS

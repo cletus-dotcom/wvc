@@ -105,10 +105,89 @@
                 </div>
                 
                 <!-- Additional Actions -->
-                <div class="mt-3 d-flex gap-2">
-                    <a href="{{ url_for('construction.project_detail', project_id=project.id) }}" class="btn btn-primary">
-                        View Project Details
-                    </a>
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary" id="toggleViewByInvoice" aria-expanded="false">
+                        View By Invoice
+                    </button>
+                </div>
+
+                <!-- View By Invoice: hidden card with expenses grouped by invoice (expandable rows) -->
+                <div id="viewByInvoiceCard" class="mt-4" style="display: none;">
+                    <h6 class="text-muted mb-2">Expenses by invoice – click a row to expand itemized details</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 2rem;"></th>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Total (₱)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in invoices %}
+                                <tr class="invoice-row align-middle" data-invoice-id="inv-{{ loop.index }}" style="cursor: pointer;">
+                                    <td class="text-center">
+                                        <span class="invoice-toggle" aria-hidden="true">▶</span>
+                                    </td>
+                                    <td>{{ inv.invoice_number }}</td>
+                                    <td>{{ inv.expense_date.strftime('%d %b %Y') if inv.expense_date else 'N/A' }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(inv.total) }}</td>
+                                </tr>
+                                <tr class="invoice-detail-row" id="inv-detail-{{ loop.index }}" style="display: none;">
+                                    <td colspan="4" class="p-0 bg-light">
+                                        <div class="p-2">
+                                            <table class="table table-sm table-bordered mb-0 small">
+                                                <thead class="table-secondary">
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Type</th>
+                                                        <th>Description / Item</th>
+                                                        <th>Qty</th>
+                                                        <th>Unit</th>
+                                                        <th class="text-end">Unit Price</th>
+                                                        <th class="text-end">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for e in inv.line_items %}
+                                                    <tr>
+                                                        <td>{{ e.expense_date.strftime('%d %b %Y') if e.expense_date else 'N/A' }}</td>
+                                                        <td><span class="badge bg-secondary">{{ e.expense_type }}</span></td>
+                                                        <td>
+                                                            {% if e.expense_type == 'Materials' %}{{ e.item or 'N/A' }}
+                                                            {% elif e.expense_type == 'Labor' %}{{ e.employee_name or 'Labor' }}
+                                                            {% elif e.expense_type == 'Gasoline' %}Gasoline
+                                                            {% elif e.expense_type == 'Documents' %}{{ e.document_ref or 'N/A' }}
+                                                            {% elif e.expense_type == 'Obligation' %}{{ e.obligation_ref or 'N/A' }}
+                                                            {% else %}N/A{% endif %}
+                                                        </td>
+                                                        <td>{% if e.expense_type == 'Materials' %}{{ "{:,.3f}".format(e.qty) if e.qty else '-' }}{% elif e.expense_type == 'Labor' %}{{ "{:,.2f}".format(e.days) if e.days else '-' }} d{% else %}-{% endif %}</td>
+                                                        <td>{% if e.expense_type == 'Materials' %}{{ e.unit or '-' }}{% else %}-{% endif %}</td>
+                                                        <td class="text-end">{% if e.expense_type == 'Materials' %}{{ "{:,.2f}".format(e.unit_price) if e.unit_price else '-' }}{% elif e.expense_type == 'Labor' %}{{ "{:,.2f}".format(e.rate_per_day) if e.rate_per_day else '-' }}{% else %}-{% endif %}</td>
+                                                        <td class="text-end">
+                                                            {% if e.expense_type == 'Materials' %}{{ "{:,.2f}".format(e.material_amount) if e.material_amount else '-' }}
+                                                            {% elif e.expense_type == 'Labor' %}{{ "{:,.2f}".format(e.labor_charge) if e.labor_charge else '-' }}
+                                                            {% elif e.expense_type == 'Gasoline' %}{{ "{:,.2f}".format(e.gasoline_amount) if e.gasoline_amount else '-' }}
+                                                            {% elif e.expense_type == 'Documents' %}{{ "{:,.2f}".format(e.document_amount) if e.document_amount else '-' }}
+                                                            {% elif e.expense_type == 'Obligation' %}{{ "{:,.2f}".format(e.obligation_amount) if e.obligation_amount else '-' }}
+                                                            {% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No invoices with expenses.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -236,6 +315,30 @@
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // View By Invoice: toggle card visibility
+        const toggleBtn = document.getElementById('toggleViewByInvoice');
+        const card = document.getElementById('viewByInvoiceCard');
+        if (toggleBtn && card) {
+            toggleBtn.addEventListener('click', function() {
+                const isHidden = card.style.display === 'none';
+                card.style.display = isHidden ? 'block' : 'none';
+                toggleBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
+
+        // Expand/collapse invoice detail rows
+        document.querySelectorAll('.invoice-row').forEach(function(row) {
+            row.addEventListener('click', function() {
+                const id = this.getAttribute('data-invoice-id');
+                const detailRow = document.getElementById(id.replace('inv-', 'inv-detail-'));
+                const toggleSpan = this.querySelector('.invoice-toggle');
+                if (!detailRow) return;
+                const isExpanded = detailRow.style.display !== 'none';
+                detailRow.style.display = isExpanded ? 'none' : 'table-row';
+                if (toggleSpan) toggleSpan.textContent = isExpanded ? '▶' : '▼';
+            });
+        });
+
         // Prepare data for 3D chart
         const categories = ['Revenue', 'Materials', 'Labor', 'Gasoline', 'Documents', 'Obligations'];
         const amounts = [

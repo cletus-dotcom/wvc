@@ -47,6 +47,7 @@
                 <th>Contractor</th>
                 <th>Duration (days)</th>
                 <th>Status</th>
+                <th class="text-center">Action</th>
             </tr>
         </thead>
 
@@ -67,6 +68,9 @@
                 <td>{{ p.contractor_name }}</td>
                 <td>{{ p.contract_duration }}</td>
                 <td>{{ p.status }}</td>
+                <td class="text-center">
+                    <a href="{{ url_for('construction.edit_project_entries', project_id=p.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">Edit Entry</a>
+                </td>
             </tr>
         {% endfor %}
         </tbody>

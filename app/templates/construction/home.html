@@ -183,8 +183,15 @@
             <div class="card-header bg-primary text-white">
                 List of Projects
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text"
+                           class="form-control form-control-lg"
+                           id="projectSearch"
+                           placeholder="Search by project name, site, contractor, status..."
+                           autocomplete="off">
+                </div>
+                <div class="table-responsive p-0">
                     <table class="table table-striped mb-0">
                         <thead class="table-light">
                             <tr>
@@ -197,10 +204,11 @@
                                 <th>Amount</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="projectTableBody">
                         {% for project in projects %}
                         <tr class="project-row"
-                            data-href="{{ url_for('construction.project_detail', project_id=project.id) }}">
+                            data-href="{{ url_for('construction.project_detail', project_id=project.id) }}"
+                            data-search="{{ (project.project_name or '')|lower }} {{ (project.project_site or '')|lower }} {{ (project.contractor_name or '')|lower }} {{ (project.status or '')|lower }}">
                             <td>{{ project.project_name }}</td>
                             <td>{{ project.project_site }}</td>
                             <td>{{ project.status }}</td>
@@ -210,12 +218,14 @@
                             <td>{{ "{:,.2f}".format(project.contract_price) if project.contract_price else '' }}</td>
                         </tr>
                         {% else %}
-                        <tr>
+                        <tr id="noProjectsRow">
                             <td colspan="7" class="text-center">No projects found.</td>
                         </tr>
                         {% endfor %}
+                        <tr id="noResultsRow" style="display: none;">
+                            <td colspan="7" class="text-center">No matching projects.</td>
+                        </tr>
                     </tbody>
-
                     </table>
                 </div>
             </div>
@@ -227,12 +237,37 @@
     {% block scripts %}
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
-        // Make project rows clickable without inline JS (avoids template-lint JS parsing issues)
-        document.querySelectorAll('.project-row').forEach(row => {
-            row.style.cursor = 'pointer';
-            row.addEventListener('click', () => {
-                const href = row.dataset.href;
-                if (href) window.location.href = href;
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('projectSearch');
+            const tableBody = document.getElementById('projectTableBody');
+            const noResultsRow = document.getElementById('noResultsRow');
+            const noProjectsRow = document.getElementById('noProjectsRow');
+
+            // Search filter: show/hide rows and "No matching projects"
+            if (searchInput && tableBody) {
+                searchInput.addEventListener('input', function() {
+                    const query = (this.value || '').trim().toLowerCase();
+                    const rows = tableBody.querySelectorAll('tr.project-row');
+                    let visibleCount = 0;
+                    rows.forEach(function(row) {
+                        const searchText = (row.getAttribute('data-search') || '');
+                        const show = !query || searchText.indexOf(query) !== -1;
+                        row.style.display = show ? '' : 'none';
+                        if (show) visibleCount++;
+                    });
+                    if (noResultsRow) {
+                        noResultsRow.style.display = (rows.length > 0 && visibleCount === 0) ? '' : 'none';
+                    }
+                });
+            }
+
+            // Make project rows clickable
+            document.querySelectorAll('.project-row').forEach(row => {
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', () => {
+                    const href = row.dataset.href;
+                    if (href) window.location.href = href;
+                });
             });
         });
     </script>

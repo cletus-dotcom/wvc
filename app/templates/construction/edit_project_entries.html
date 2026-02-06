@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Entries – {{ project.project_name }}</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        .invoice-row:hover { background: #eef2ff; }
+        .invoice-row { cursor: pointer; }
+    </style>
+</head>
+<body class="bg-light p-4">
+
+<div class="container">
+
+    <!-- Project header -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Edit Entries: {{ project.project_name }}</h4>
+            <a href="{{ url_for('construction.update_project') }}" class="btn btn-light btn-sm">← Back to Update Project</a>
+        </div>
+        <div class="card-body">
+            <div class="row mb-2">
+                <div class="col-md-3"><strong>Project Site:</strong> {{ project.project_site or 'N/A' }}</div>
+                <div class="col-md-3"><strong>Contractor:</strong> {{ project.contractor_name }}</div>
+                <div class="col-md-2"><strong>Status:</strong> <span class="badge bg-info">{{ project.status }}</span></div>
+                <div class="col-md-2"><strong>NTP Date:</strong> {{ project.ntp_date.strftime('%d %b %Y') if project.ntp_date else 'N/A' }}</div>
+                <div class="col-md-2"><strong>Completion:</strong> {{ project.completion_date.strftime('%d %b %Y') if project.completion_date else 'N/A' }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><strong>Duration:</strong> {{ project.contract_duration }} days</div>
+                <div class="col-md-2"><strong>Contract Price:</strong> {{ "{:,.2f}".format(project.contract_price) if project.contract_price else 'N/A' }} ₱</div>
+            </div>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Expenses by invoice – click a row to expand; use Edit to change a line item</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 2rem;"></th>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th class="text-end">Total (₱)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr class="invoice-row align-middle" data-invoice-id="inv-{{ loop.index }}">
+                            <td class="text-center"><span class="invoice-toggle">▶</span></td>
+                            <td>{{ inv.invoice_number }}</td>
+                            <td>{{ inv.expense_date.strftime('%d %b %Y') if inv.expense_date else 'N/A' }}</td>
+                            <td class="text-end">{{ "{:,.2f}".format(inv.total) }}</td>
+                        </tr>
+                        <tr class="invoice-detail-row" id="inv-detail-{{ loop.index }}" style="display: none;">
+                            <td colspan="4" class="p-0 bg-light">
+                                <div class="p-2">
+                                    <table class="table table-sm table-bordered mb-0 small">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Type</th>
+                                                <th>Description / Item</th>
+                                                <th>Qty</th>
+                                                <th>Unit</th>
+                                                <th class="text-end">Unit Price</th>
+                                                <th class="text-end">Amount</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for e in inv.line_items %}
+                                            <tr data-expense-id="{{ e.id }}"
+                                                data-expense-type="{{ e.expense_type }}"
+                                                data-expense-date="{{ e.expense_date.isoformat() if e.expense_date else '' }}"
+                                                data-invoice-number="{{ e.invoice_number or '' }}"
+                                                data-item="{{ e.item or '' }}"
+                                                data-qty="{{ e.qty or '' }}"
+                                                data-unit="{{ e.unit or '' }}"
+                                                data-unit-price="{{ e.unit_price or '' }}"
+                                                data-material-amount="{{ e.material_amount or '' }}"
+                                                data-labor-id="{{ e.labor_id or '' }}"
+                                                data-rate-per-day="{{ e.rate_per_day or '' }}"
+                                                data-days="{{ e.days or '' }}"
+                                                data-overtime-hours="{{ e.overtime_hours or '' }}"
+                                                data-overtime-amount="{{ e.overtime_amount or '' }}"
+                                                data-labor-charge="{{ e.labor_charge or '' }}"
+                                                data-gasoline-amount="{{ e.gasoline_amount or '' }}"
+                                                data-document-ref="{{ e.document_ref or '' }}"
+                                                data-document-amount="{{ e.document_amount or '' }}"
+                                                data-obligation-ref="{{ e.obligation_ref or '' }}"
+                                                data-obligation-amount="{{ e.obligation_amount or '' }}">
+                                                <td>{{ e.expense_date.strftime('%d %b %Y') if e.expense_date else 'N/A' }}</td>
+                                                <td><span class="badge bg-secondary">{{ e.expense_type }}</span></td>
+                                                <td>
+                                                    {% if e.expense_type == 'Materials' %}{{ e.item or 'N/A' }}
+                                                    {% elif e.expense_type == 'Labor' %}{{ e.employee_name or 'Labor' }}
+                                                    {% elif e.expense_type == 'Gasoline' %}Gasoline
+                                                    {% elif e.expense_type == 'Documents' %}{{ e.document_ref or 'N/A' }}
+                                                    {% elif e.expense_type == 'Obligation' %}{{ e.obligation_ref or 'N/A' }}
+                                                    {% else %}N/A{% endif %}
+                                                </td>
+                                                <td>{% if e.expense_type == 'Materials' %}{{ "{:,.3f}".format(e.qty) if e.qty else '-' }}{% elif e.expense_type == 'Labor' %}{{ "{:,.2f}".format(e.days) if e.days else '-' }} d{% else %}-{% endif %}</td>
+                                                <td>{% if e.expense_type == 'Materials' %}{{ e.unit or '-' }}{% else %}-{% endif %}</td>
+                                                <td class="text-end">{% if e.expense_type == 'Materials' %}{{ "{:,.2f}".format(e.unit_price) if e.unit_price else '-' }}{% elif e.expense_type == 'Labor' %}{{ "{:,.2f}".format(e.rate_per_day) if e.rate_per_day else '-' }}{% else %}-{% endif %}</td>
+                                                <td class="text-end">
+                                                    {% if e.expense_type == 'Materials' %}{{ "{:,.2f}".format(e.material_amount) if e.material_amount else '-' }}
+                                                    {% elif e.expense_type == 'Labor' %}{{ "{:,.2f}".format(e.labor_charge) if e.labor_charge else '-' }}
+                                                    {% elif e.expense_type == 'Gasoline' %}{{ "{:,.2f}".format(e.gasoline_amount) if e.gasoline_amount else '-' }}
+                                                    {% elif e.expense_type == 'Documents' %}{{ "{:,.2f}".format(e.document_amount) if e.document_amount else '-' }}
+                                                    {% elif e.expense_type == 'Obligation' %}{{ "{:,.2f}".format(e.obligation_amount) if e.obligation_amount else '-' }}
+                                                    {% else %}-{% endif %}
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary edit-expense-btn">Edit</button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No invoices with expenses.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Edit expense modal -->
+<div class="modal fade" id="editExpenseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" id="editExpenseForm" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit line item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="expense_id" id="edit_expense_id">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Expense date</label>
+                        <input type="date" name="expense_date" id="edit_expense_date" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Invoice number</label>
+                        <input type="text" name="invoice_number" id="edit_invoice_number" class="form-control">
+                    </div>
+                </div>
+
+                <div id="edit-materials-fields" class="expense-type-fields" style="display: none;">
+                    <hr><h6>Materials</h6>
+                    <div class="row g-2">
+                        <div class="col-12"><label class="form-label">Item</label><input type="text" name="item" id="edit_item" class="form-control"></div>
+                        <div class="col-4"><label class="form-label">Qty</label><input type="number" step="0.001" name="qty" id="edit_qty" class="form-control"></div>
+                        <div class="col-4"><label class="form-label">Unit</label><input type="text" name="unit" id="edit_unit" class="form-control"></div>
+                        <div class="col-4"><label class="form-label">Unit price</label><input type="number" step="0.01" name="unit_price" id="edit_unit_price" class="form-control"></div>
+                        <div class="col-6"><label class="form-label">Amount</label><input type="number" step="0.01" name="material_amount" id="edit_material_amount" class="form-control" readonly></div>
+                    </div>
+                </div>
+
+                <div id="edit-labor-fields" class="expense-type-fields" style="display: none;">
+                    <hr><h6>Labor</h6>
+                    <div class="row g-2">
+                        <div class="col-12"><label class="form-label">Employee</label><select name="labor_id" id="edit_labor_id" class="form-select"><option value="">-- Select --</option>{% for emp in employees %}<option value="{{ emp.id }}">{{ emp.name }}</option>{% endfor %}</select></div>
+                        <div class="col-4"><label class="form-label">Rate/day</label><input type="number" step="0.01" name="rate_per_day" id="edit_rate_per_day" class="form-control"></div>
+                        <div class="col-4"><label class="form-label">Days</label><input type="number" step="0.001" name="days" id="edit_days" class="form-control"></div>
+                        <div class="col-4"><label class="form-label">Overtime Hours</label><input type="number" step="0.1" min="0" name="overtime_hours" id="edit_overtime_hours" class="form-control"></div>
+                        <div class="col-4"><label class="form-label">Overtime Amount</label><input type="number" step="0.01" name="overtime_amount" id="edit_overtime_amount" class="form-control" readonly></div>
+                        <div class="col-4"><label class="form-label">Labor Total Amount</label><input type="number" step="0.01" name="labor_charge" id="edit_labor_charge" class="form-control" readonly></div>
+                    </div>
+                </div>
+
+                <div id="edit-gasoline-fields" class="expense-type-fields" style="display: none;">
+                    <hr><h6>Gasoline</h6>
+                    <div class="row g-2"><div class="col-6"><label class="form-label">Amount</label><input type="number" step="0.01" name="gasoline_amount" id="edit_gasoline_amount" class="form-control"></div></div>
+                </div>
+
+                <div id="edit-documents-fields" class="expense-type-fields" style="display: none;">
+                    <hr><h6>Documents</h6>
+                    <div class="row g-2">
+                        <div class="col-6"><label class="form-label">Reference</label><input type="text" name="document_ref" id="edit_document_ref" class="form-control"></div>
+                        <div class="col-6"><label class="form-label">Amount</label><input type="number" step="0.01" name="document_amount" id="edit_document_amount" class="form-control"></div>
+                    </div>
+                </div>
+
+                <div id="edit-obligation-fields" class="expense-type-fields" style="display: none;">
+                    <hr><h6>Obligation</h6>
+                    <div class="row g-2">
+                        <div class="col-6"><label class="form-label">Reference</label><input type="text" name="obligation_ref" id="edit_obligation_ref" class="form-control"></div>
+                        <div class="col-6"><label class="form-label">Amount</label><input type="number" step="0.01" name="obligation_amount" id="edit_obligation_amount" class="form-control"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+(function () {
+    const projectId = {{ project.id }};
+    const modal = new bootstrap.Modal(document.getElementById("editExpenseModal"));
+    const form = document.getElementById("editExpenseForm");
+
+    document.querySelectorAll(".invoice-row").forEach(row => {
+        row.addEventListener("click", function () {
+            const id = this.getAttribute("data-invoice-id");
+            const detail = document.getElementById("inv-detail-" + id.replace("inv-", ""));
+            const toggle = this.querySelector(".invoice-toggle");
+            if (detail.style.display === "none") {
+                detail.style.display = "table-row";
+                if (toggle) toggle.textContent = "▼";
+            } else {
+                detail.style.display = "none";
+                if (toggle) toggle.textContent = "▶";
+            }
+        });
+    });
+
+    document.querySelectorAll(".edit-expense-btn").forEach(btn => {
+        btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            const tr = this.closest("tr");
+            const id = tr.getAttribute("data-expense-id");
+            const type = tr.getAttribute("data-expense-type");
+
+            form.action = "/construction/project/" + projectId + "/expense/" + id + "/edit";
+
+            document.getElementById("edit_expense_date").value = tr.getAttribute("data-expense-date") || "";
+            document.getElementById("edit_invoice_number").value = tr.getAttribute("data-invoice-number") || "";
+
+            document.querySelectorAll(".expense-type-fields").forEach(block => block.style.display = "none");
+            if (type === "Materials") {
+                document.getElementById("edit-materials-fields").style.display = "block";
+                document.getElementById("edit_item").value = tr.getAttribute("data-item") || "";
+                document.getElementById("edit_qty").value = tr.getAttribute("data-qty") || "";
+                document.getElementById("edit_unit").value = tr.getAttribute("data-unit") || "";
+                document.getElementById("edit_unit_price").value = tr.getAttribute("data-unit-price") || "";
+                document.getElementById("edit_material_amount").value = tr.getAttribute("data-material-amount") || "";
+            } else if (type === "Labor") {
+                document.getElementById("edit-labor-fields").style.display = "block";
+                document.getElementById("edit_labor_id").value = tr.getAttribute("data-labor-id") || "";
+                document.getElementById("edit_rate_per_day").value = tr.getAttribute("data-rate-per-day") || "";
+                document.getElementById("edit_days").value = tr.getAttribute("data-days") || "";
+                document.getElementById("edit_overtime_hours").value = tr.getAttribute("data-overtime-hours") || "";
+                document.getElementById("edit_overtime_amount").value = tr.getAttribute("data-overtime-amount") || "";
+                document.getElementById("edit_labor_charge").value = tr.getAttribute("data-labor-charge") || "";
+                updateLaborTotal();
+            } else if (type === "Gasoline") {
+                document.getElementById("edit-gasoline-fields").style.display = "block";
+                document.getElementById("edit_gasoline_amount").value = tr.getAttribute("data-gasoline-amount") || "";
+            } else if (type === "Documents") {
+                document.getElementById("edit-documents-fields").style.display = "block";
+                document.getElementById("edit_document_ref").value = tr.getAttribute("data-document-ref") || "";
+                document.getElementById("edit_document_amount").value = tr.getAttribute("data-document-amount") || "";
+            } else if (type === "Obligation") {
+                document.getElementById("edit-obligation-fields").style.display = "block";
+                document.getElementById("edit_obligation_ref").value = tr.getAttribute("data-obligation-ref") || "";
+                document.getElementById("edit_obligation_amount").value = tr.getAttribute("data-obligation-amount") || "";
+            }
+            modal.show();
+        });
+    });
+
+    // Materials: auto-compute amount = qty * unit_price
+    function updateMaterialAmount() {
+        const qty = parseFloat(document.getElementById("edit_qty").value) || 0;
+        const unitPrice = parseFloat(document.getElementById("edit_unit_price").value) || 0;
+        const amount = qty * unitPrice;
+        document.getElementById("edit_material_amount").value = amount ? amount.toFixed(2) : "";
+    }
+    document.getElementById("edit_qty").addEventListener("input", updateMaterialAmount);
+    document.getElementById("edit_unit_price").addEventListener("input", updateMaterialAmount);
+
+    // Labor: auto-compute overtime amount = (rate_per_day/8) * overtime_hours, labor total = (rate*days) + overtime_amount
+    function updateLaborTotal() {
+        const rate = parseFloat(document.getElementById("edit_rate_per_day").value) || 0;
+        const days = parseFloat(document.getElementById("edit_days").value) || 0;
+        const overtimeHours = parseFloat(document.getElementById("edit_overtime_hours").value) || 0;
+        const ratePerHour = rate / 8;
+        const overtimeAmount = ratePerHour * overtimeHours;
+        document.getElementById("edit_overtime_amount").value = overtimeAmount ? overtimeAmount.toFixed(2) : "";
+        const laborTotal = (rate * days) + overtimeAmount;
+        document.getElementById("edit_labor_charge").value = laborTotal ? laborTotal.toFixed(2) : "";
+    }
+    document.getElementById("edit_rate_per_day").addEventListener("input", updateLaborTotal);
+    document.getElementById("edit_days").addEventListener("input", updateLaborTotal);
+    document.getElementById("edit_overtime_hours").addEventListener("input", updateLaborTotal);
+})();
+</script>
+
+</body>
+</html>

@@ -101,8 +101,41 @@ def project_overview(project_id):
         'contract_price': contract_price,
         'balance': balance
     }
-    
-    return render_template("construction/project_overview.html", project=project, summary=summary, expenses=expenses)
+
+    # Group expenses by invoice_number for "View By Invoice" (exclude Activity)
+    def _expense_amount(e):
+        if e.expense_type == "Materials" and e.material_amount:
+            return float(e.material_amount)
+        if e.expense_type == "Labor" and e.labor_charge:
+            return float(e.labor_charge)
+        if e.expense_type == "Gasoline" and e.gasoline_amount:
+            return float(e.gasoline_amount)
+        if e.expense_type == "Documents" and e.document_amount:
+            return float(e.document_amount)
+        if e.expense_type == "Obligation" and e.obligation_amount:
+            return float(e.obligation_amount)
+        return 0
+
+    invoices_map = defaultdict(list)
+    for e in expenses:
+        if e.expense_type == "Activity":
+            continue
+        inv = (e.invoice_number or "").strip() or "_no_invoice_"
+        invoices_map[inv].append(e)
+    invoices = []
+    for inv_num, items in sorted(invoices_map.items(), key=lambda x: (x[1][0].expense_date or datetime.min.date(), x[0]) if x[1] else ((datetime.min.date(), x[0]))):
+        if inv_num == "_no_invoice_":
+            continue
+        total_inv = sum(_expense_amount(e) for e in items)
+        first_date = items[0].expense_date if items else None
+        invoices.append({
+            "invoice_number": inv_num,
+            "expense_date": first_date,
+            "total": total_inv,
+            "line_items": items,
+        })
+
+    return render_template("construction/project_overview.html", project=project, summary=summary, expenses=expenses, invoices=invoices)
 
 
 @construction_bp.route("/balance-sheet")
@@ -480,6 +513,147 @@ def delete_project(project_id):
     flash("Project deleted successfully!", "danger")
     return redirect(url_for("construction.update_project"))
 
+
+@construction_bp.route("/project/<int:project_id>/edit-entries")
+@login_required
+@corporate_only
+def edit_project_entries(project_id):
+    """List expenses by invoice for a project; each row expandable to show line items (editable)."""
+    project = ConstructionContract.query.get_or_404(project_id)
+    from app.models.core import Employee, Department
+    expenses = ProjectExpense.query.filter_by(contract_id=project_id).order_by(
+        ProjectExpense.expense_date.desc(), ProjectExpense.created_at.desc()
+    ).all()
+
+    for expense in expenses:
+        if expense.expense_type == "Labor" and expense.labor_id:
+            employee = Employee.query.get(expense.labor_id)
+            expense.employee_name = employee.name if employee else "Unknown"
+        else:
+            expense.employee_name = None
+
+    def _expense_amount(e):
+        if e.expense_type == "Materials" and e.material_amount:
+            return float(e.material_amount)
+        if e.expense_type == "Labor" and e.labor_charge:
+            return float(e.labor_charge)
+        if e.expense_type == "Gasoline" and e.gasoline_amount:
+            return float(e.gasoline_amount)
+        if e.expense_type == "Documents" and e.document_amount:
+            return float(e.document_amount)
+        if e.expense_type == "Obligation" and e.obligation_amount:
+            return float(e.obligation_amount)
+        return 0
+
+    invoices_map = defaultdict(list)
+    for e in expenses:
+        if e.expense_type == "Activity":
+            continue
+        inv = (e.invoice_number or "").strip() or "_no_invoice_"
+        invoices_map[inv].append(e)
+    invoices = []
+    for inv_num, items in sorted(
+        invoices_map.items(),
+        key=lambda x: (x[1][0].expense_date or datetime.min.date(), x[0]) if x[1] else (datetime.min.date(), x[0]),
+    ):
+        if inv_num == "_no_invoice_":
+            continue
+        total_inv = sum(_expense_amount(e) for e in items)
+        first_date = items[0].expense_date if items else None
+        invoices.append({
+            "invoice_number": inv_num,
+            "expense_date": first_date,
+            "total": total_inv,
+            "line_items": items,
+        })
+
+    construction_dept = Department.query.filter_by(name="Construction").first()
+    employees = []
+    if construction_dept:
+        employees = Employee.query.filter_by(department_id=construction_dept.id).order_by(Employee.name.asc()).all()
+
+    return render_template(
+        "construction/edit_project_entries.html",
+        project=project,
+        invoices=invoices,
+        employees=employees,
+    )
+
+
+@construction_bp.post("/project/<int:project_id>/expense/<int:expense_id>/edit")
+@login_required
+@corporate_only
+def update_expense(project_id, expense_id):
+    """Update a single project expense (one line item)."""
+    project = ConstructionContract.query.get_or_404(project_id)
+    expense = ProjectExpense.query.filter_by(id=expense_id, contract_id=project_id).first_or_404()
+
+    expense.expense_date = _parse_expense_date(request.form.get("expense_date"))
+    expense.invoice_number = (request.form.get("invoice_number") or "").strip() or None
+
+    if expense.expense_type == "Materials":
+        expense.item = (request.form.get("item") or "").strip() or None
+        try:
+            expense.qty = Decimal(str(request.form.get("qty") or 0))
+        except (TypeError, ValueError):
+            expense.qty = Decimal("0")
+        expense.unit = (request.form.get("unit") or "").strip() or None
+        try:
+            expense.unit_price = Decimal(str(request.form.get("unit_price") or 0))
+        except (TypeError, ValueError):
+            expense.unit_price = Decimal("0")
+        try:
+            expense.material_amount = Decimal(str(request.form.get("material_amount") or 0))
+        except (TypeError, ValueError):
+            expense.material_amount = (expense.qty or 0) * (expense.unit_price or 0)
+    elif expense.expense_type == "Labor":
+        try:
+            labor_id = request.form.get("labor_id")
+            expense.labor_id = int(labor_id) if labor_id else None
+        except (TypeError, ValueError):
+            pass
+        try:
+            expense.rate_per_day = Decimal(str(request.form.get("rate_per_day") or 0))
+        except (TypeError, ValueError):
+            expense.rate_per_day = Decimal("0")
+        try:
+            expense.days = Decimal(str(request.form.get("days") or 0))
+        except (TypeError, ValueError):
+            expense.days = Decimal("0")
+        try:
+            expense.overtime_hours = Decimal(str(request.form.get("overtime_hours") or 0))
+        except (TypeError, ValueError):
+            expense.overtime_hours = Decimal("0")
+        rate_per_day = expense.rate_per_day or Decimal("0")
+        overtime_hours = expense.overtime_hours or Decimal("0")
+        expense.overtime_amount = (rate_per_day / 8) * overtime_hours
+        try:
+            expense.labor_charge = Decimal(str(request.form.get("labor_charge") or 0))
+        except (TypeError, ValueError):
+            expense.labor_charge = (rate_per_day * (expense.days or 0)) + expense.overtime_amount
+    elif expense.expense_type == "Gasoline":
+        try:
+            expense.gasoline_amount = Decimal(str(request.form.get("gasoline_amount") or 0))
+        except (TypeError, ValueError):
+            expense.gasoline_amount = Decimal("0")
+    elif expense.expense_type == "Documents":
+        expense.document_ref = (request.form.get("document_ref") or "").strip() or None
+        try:
+            expense.document_amount = Decimal(str(request.form.get("document_amount") or 0))
+        except (TypeError, ValueError):
+            expense.document_amount = Decimal("0")
+    elif expense.expense_type == "Obligation":
+        expense.obligation_ref = (request.form.get("obligation_ref") or "").strip() or None
+        try:
+            expense.obligation_amount = Decimal(str(request.form.get("obligation_amount") or 0))
+        except (TypeError, ValueError):
+            expense.obligation_amount = Decimal("0")
+
+    db.session.commit()
+    flash("Expense updated successfully.", "success")
+    return redirect(url_for("construction.edit_project_entries", project_id=project_id))
+
+
 @construction_bp.route("/project/<int:project_id>")
 @login_required
 @department_required("Construction", "Corporate")
@@ -631,9 +805,17 @@ def add_materials(project_id):
 @login_required
 @department_required("Construction", "Corporate")
 def get_employees():
-    from app.models.core import Employee  # adjust import as needed
+    from app.models.core import Employee, Department
 
-    employees = Employee.query.order_by(Employee.name.asc()).all()
+    # Only employees in Construction department (for Labor entry on project form)
+    construction_dept = Department.query.filter_by(name="Construction").first()
+    if not construction_dept:
+        return jsonify({"employees": []})
+    employees = (
+        Employee.query.filter_by(department_id=construction_dept.id)
+        .order_by(Employee.name.asc())
+        .all()
+    )
 
     return jsonify({
         "employees": [
@@ -667,21 +849,27 @@ def add_labor(project_id):
         labor_id = entry.get("labor_id")
         rate_per_day = entry.get("rate_per_day") or 0
         days = entry.get("days") or 0
-        labor_charge = entry.get("labor_charge") or (rate_per_day * days)
+        overtime_hours = entry.get("overtime_hours") or 0
+        overtime_amount = entry.get("overtime_amount") or 0
+        labor_charge = entry.get("labor_charge") or (float(rate_per_day) * float(days) + float(overtime_amount))
 
         try:
-            rate_per_day = Decimal(rate_per_day)
-            days = Decimal(days)
-            labor_charge = Decimal(labor_charge)
-        except:
+            rate_per_day = Decimal(str(rate_per_day))
+            days = Decimal(str(days))
+            overtime_hours = Decimal(str(overtime_hours))
+            overtime_amount = Decimal(str(overtime_amount))
+            labor_charge = Decimal(str(labor_charge))
+        except (TypeError, ValueError):
             continue
 
-        if labor_id and days > 0:
+        if labor_id and (days > 0 or overtime_hours > 0):
             valid_rows.append({
                 "labor_id": labor_id,
                 "rate_per_day": rate_per_day,
                 "days": days,
-                "labor_charge": labor_charge
+                "overtime_hours": overtime_hours,
+                "overtime_amount": overtime_amount,
+                "labor_charge": labor_charge,
             })
 
     if not valid_rows:
@@ -715,6 +903,8 @@ def add_labor(project_id):
                     rate_per_day=entry["rate_per_day"],
                     days=entry["days"],
                     labor_charge=entry["labor_charge"],
+                    overtime_hours=entry["overtime_hours"],
+                    overtime_amount=entry["overtime_amount"],
                     invoice_number=invoice_number,
                     created_by=session_user,
                 )
