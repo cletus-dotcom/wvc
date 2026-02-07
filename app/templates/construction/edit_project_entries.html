@@ -1,20 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Edit Entries – {{ project.project_name }}</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
     <style>
         .invoice-row:hover { background: #eef2ff; }
         .invoice-row { cursor: pointer; }
     </style>
 </head>
-<body class="bg-light p-4">
+<body class="bg-light">
 
-<div class="container">
+<div class="container container-mobile py-3">
 
     <!-- Project header -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-primary text-white d-flex page-header-mobile flex-wrap justify-content-between align-items-center gap-2">
             <h4 class="mb-0">Edit Entries: {{ project.project_name }}</h4>
             <a href="{{ url_for('construction.update_project') }}" class="btn btn-light btn-sm">← Back to Update Project</a>
         </div>
@@ -45,8 +48,8 @@
         <div class="card-header bg-light">
             <h5 class="mb-0">Expenses by invoice – click a row to expand; use Edit to change a line item</h5>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
+        <div class="card-body p-0">
+            <div class="table-responsive table-responsive-mobile">
                 <table class="table table-sm table-bordered table-hover mb-0">
                     <thead class="table-dark">
                         <tr>

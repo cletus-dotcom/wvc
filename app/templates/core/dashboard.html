@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>WVC</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
     <style>
         body {
             padding-top: 50px;
@@ -222,6 +224,10 @@
             flex-wrap: nowrap;
             justify-content: center;
         }
+        @media (max-width: 767.98px) {
+            .row.ventures-row { flex-wrap: wrap; }
+            .row.ventures-row .col-flex { flex: 1 1 100%; max-width: 100%; }
+        }
         /* Ensure equal height across all columns in a row */
         .col-flex {
             display: flex;
@@ -318,7 +324,7 @@
 
 
 
-<div class="container dashboard-container">
+<div class="container dashboard-container container-mobile">
     <!-- Logo -->
     <img src="{{ url_for('static', filename='images/wvc_logo.png') }}" alt="WVC Logo" class="logo">
 

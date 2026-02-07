@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{ project.project_name }}</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
 </head>
-<body class="bg-light p-4">
-<div class="container">
+<body class="bg-light">
+<div class="container container-mobile py-3 px-3">
 
     <!-- Title row -->
-    <div class="d-flex justify-content-between align-items-center mb-1">
+    <div class="d-flex page-header-mobile flex-wrap justify-content-between align-items-center mb-1 gap-2">
         <h2>{{ project.project_name }}</h2>
         <a href="{{ url_for('construction.construction_home') }}" class="btn btn-secondary">
             ⬅ Back to Home
@@ -33,7 +34,7 @@
             <h5 class="card-title mb-0 text-white">Project Activities</h5>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive table-responsive-mobile">
                 <table class="table table-sm table-bordered table-striped mb-0" id="activitiesDisplayTable">
                     <thead class="table-light">
                         <tr>

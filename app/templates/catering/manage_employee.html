@@ -2,24 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Manage Employees - Catering</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
 </head>
 <body class="bg-light">
 
-<div class="container mt-4">
+<div class="container container-mobile mt-4 py-3">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-start mb-3">
+    <div class="d-flex page-header-mobile flex-wrap justify-content-between align-items-start mb-3 gap-2">
         <div>
-            <a href="{{ url_for('catering.catering_home') }}" class="btn btn-secondary btn-sm mb-1">&larr; Back</a>
+            <a href="{{ url_for('catering.catering_home') }}" class="btn btn-secondary btn-block-mobile mb-1">← Back</a>
             <h3 class="mb-1">Manage Employees</h3>
         </div>
-
-        <button class="btn btn-warning btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-            + Add Employee
-        </button>
+        <button type="button" class="btn btn-warning btn-block-mobile" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">+ Add Employee</button>
     </div>
 
     <!-- Search Bar -->
@@ -32,8 +30,9 @@
 
     <!-- Employee Table -->
     <div class="card shadow-sm">
-        <div class="card-body">
-            <table class="table table-bordered table-sm align-middle" id="employeeTable">
+        <div class="card-body p-0">
+            <div class="table-responsive-mobile">
+            <table class="table table-bordered table-sm align-middle mb-0" id="employeeTable">
                 <thead class="table-light">
                     <tr>
                         <th style="width:40px;">ID</th>
@@ -71,6 +70,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 

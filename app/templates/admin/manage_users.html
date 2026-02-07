@@ -1,23 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>User Management</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>User Management — SMBC</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
+    <style>
+        .card-hover { transition: transform 0.15s ease, box-shadow 0.15s ease; border-radius: 10px; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 6px 14px rgba(0,0,0,0.2); }
+    </style>
 </head>
-<style>
-    .card-hover {
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        border-radius: 10px;
-    }
-    .card-hover:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 14px rgba(0,0,0,0.2);
-    }
-</style>
-<body class="bg-light p-4">
+<body class="bg-light">
 
-<div class="container">
+<div class="container container-mobile py-3 py-md-4">
 
     <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -69,25 +66,13 @@
 
     <h2 class="mb-4">User Management</h2>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-
-        <div>
-            <!-- Back to Home -->
-            <a href="{{ url_for('admin.go_home') }}" class="btn btn-secondary me-2">
-                ⬅ Back to Home
-            </a>
-
-            <!-- Add User -->
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                Add User
-            </button>
-        </div>
-        
+    <div class="d-flex page-header-mobile flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <a href="{{ url_for('admin.go_home') }}" class="btn btn-secondary btn-block-mobile">← Back to Home</a>
+        <button type="button" class="btn btn-primary btn-block-mobile" data-bs-toggle="modal" data-bs-target="#addUserModal">Add User</button>
     </div>
 
-
-    <!-- Users Table -->
-    <table class="table table-bordered bg-white shadow">
+    <div class="table-responsive-mobile">
+    <table class="table table-bordered bg-white shadow mb-0">
         <thead class="table-dark">
             <tr>
                 <th>ID</th>
@@ -124,6 +109,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 
 <!-- Add User Modal -->
@@ -139,18 +125,18 @@
             <div class="modal-body">
 
                 <div class="mb-3">
-                    <label>Username</label>
+                    <label class="form-label">Username</label>
                     <input name="username" class="form-control" required>
                 </div>
 
                 <div class="mb-3">
-                    <label>Password</label>
+                    <label class="form-label">Password</label>
                     <input name="password" type="password" class="form-control" required>
                 </div>
 
                 <div class="mb-3">
                     <label>Role</label>
-                    <select name="role" class="form-control">
+                    <select name="role" class="form-select">
                         <option>Staff</option>
                         <option>Admin</option>
                         <option>Manager</option>
@@ -158,8 +144,8 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>Department</label>
-                    <select name="department" class="form-control">
+                    <label class="form-label">Department</label>
+                    <select name="department" class="form-select">
                         <option>Corporate</option>
                         <option>Construction</option>
                         <option>Carenderia</option>
@@ -193,16 +179,16 @@
             <div class="modal-body">
 
                 <div class="mb-3">
-                    <label>Role</label>
-                    <select name="role" class="form-control">
+                    <label class="form-label">Role</label>
+                    <select name="role" class="form-select">
                         <option {{ 'selected' if user.role=='Staff' }}>Staff</option>
                         <option {{ 'selected' if user.role=='Admin' }}>Admin</option>
                     </select>
                 </div>
 
                 <div class="mb-3">
-                    <label>Department</label>
-                    <select name="department" class="form-control">
+                    <label class="form-label">Department</label>
+                    <select name="department" class="form-select">
                         <option {{ 'selected' if user.department=='Corporate' }}>Corporate</option>
                         <option {{ 'selected' if user.department=='Construction' }}>Construction</option>
                         <option {{ 'selected' if user.department=='Carenderia' }}>Carenderia</option>
@@ -211,7 +197,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>New Password (optional)</label>
+                    <label class="form-label">New Password (optional)</label>
                     <input name="password" type="password"
                            class="form-control"
                            placeholder="Enter only to reset">

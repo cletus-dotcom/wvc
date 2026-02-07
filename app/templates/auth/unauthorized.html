@@ -1,1 +1,14 @@
-<h3 class="text-center text-danger mt-5">You are not authorized to access this page.</h3>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Unauthorized — SMBC</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center min-vh-100 p-3">
+    <h3 class="text-center text-danger mb-0">You are not authorized to access this page.</h3>
+</body>
+</html>

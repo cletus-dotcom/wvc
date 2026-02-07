@@ -1,0 +1,73 @@
+/* Shared mobile-friendly rules for all app pages */
+/* Include this in every template for consistent touch and viewport behavior */
+
+/* Prevent zoom on input focus (iOS) - 16px minimum */
+input.form-control,
+input.form-select,
+select.form-control,
+select.form-select,
+textarea.form-control {
+    font-size: 16px !important;
+}
+
+/* Touch-friendly buttons */
+.btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+}
+.btn-sm {
+    min-height: 38px;
+}
+
+/* Table: horizontal scroll on small screens */
+.table-responsive-mobile {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+.table-responsive-mobile .table {
+    min-width: 400px;
+}
+
+/* Page container padding */
+.container-mobile {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+@media (min-width: 576px) {
+    .container-mobile {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* Stack header on small screens */
+.page-header-mobile {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+@media (min-width: 576px) {
+    .page-header-mobile {
+        flex-direction: row;
+        align-items: center;
+        gap: 0;
+    }
+    .page-header-mobile .btn-auto-mobile { width: auto; min-width: auto; }
+}
+.page-header-mobile .btn-block-mobile { width: 100%; min-width: 0; }
+@media (min-width: 576px) {
+    .page-header-mobile .btn-block-mobile { width: auto; }
+}
+
+/* Modal: full-width buttons on small screens */
+@media (max-width: 575.98px) {
+    .modal-footer .btn {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+}
