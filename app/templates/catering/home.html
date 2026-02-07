@@ -832,9 +832,8 @@
                         updateRunningBalance();
                     });
                 
-                // Set today's date as default
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('transactionDate').value = today;
+                // Leave date empty; user must enter transaction date
+                document.getElementById('transactionDate').value = '';
                 
                 // Show modal
                 new bootstrap.Modal(document.getElementById('addTransactionModal')).show();
@@ -881,6 +880,12 @@
         // Handle transaction form submission
         document.getElementById('addTransactionForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const dateInput = document.getElementById('transactionDate');
+            if (!dateInput.value || dateInput.value.trim() === '') {
+                alert('Please enter the date of the transaction.');
+                dateInput.focus();
+                return;
+            }
             // Convert formatted booking amount back to number for submission
             const bookingAmountInput = document.getElementById('transactionBookingAmount');
             const bookingAmountValue = bookingAmountInput.value.replace(/,/g, '');
