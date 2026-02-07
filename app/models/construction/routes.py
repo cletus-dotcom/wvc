@@ -30,7 +30,16 @@ def construction_root():
 def construction_home():
     # Fetch all projects ordered by creation date descending
     projects = ConstructionContract.query.order_by(ConstructionContract.created_at.desc()).all()
-    return render_template("construction/home.html", projects=projects)
+    # Project status counts (status stored as planning, ongoing, completed)
+    total = len(projects)
+    planned = sum(1 for p in projects if (p.status or "").lower() == "planning")
+    ongoing = sum(1 for p in projects if (p.status or "").lower() == "ongoing")
+    completed = sum(1 for p in projects if (p.status or "").lower() == "completed")
+    return render_template(
+        "construction/home.html",
+        projects=projects,
+        project_counts={"total": total, "planned": planned, "ongoing": ongoing, "completed": completed},
+    )
 
 
 @construction_bp.route("/reports")

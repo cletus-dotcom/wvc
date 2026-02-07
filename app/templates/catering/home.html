@@ -7,52 +7,120 @@
     <title>Catering Home</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <style>
+    :root {
+        --pastel-wages: #fff8e1;
+        --pastel-expenses: #e8f5e9;
+        --pastel-misc: #e3f2fd;
+        --card-radius: 12px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(160deg, #fefdfb 0%, #faf6f0 100%);
+        min-height: 100vh;
+        color: #1e293b;
+    }
+
     .dropdown-menu .dropdown-item:hover {
-        background-color: #d1e7dd !important;
+        background-color: #fff8e1 !important;
         color: #000 !important;
     }
 
     .dropdown-item.corporate-item:hover {
-        background-color: #ffc107;
+        background-color: #f59e0b;
         color: #000 !important;
     }
 
-    /* Highlight table row on hover */
     .project-row {
         cursor: pointer;
-        transition: background-color 0.2s ease-in-out;
+        transition: background-color 0.2s ease;
     }
 
     .project-row:hover {
-        background-color: rgba(255, 193, 7, 0.12); /* subtle Bootstrap-warning tint */
+        background-color: rgba(245, 158, 11, 0.08) !important;
     }
 
-    /* Optional sticky table header */
+    .table-striped > tbody > tr.project-row:hover > * {
+        background-color: rgba(245, 158, 11, 0.1) !important;
+    }
+
     thead th {
         position: sticky;
         top: 0;
-        background-color: #f8f9fa;
+        background: #f8fafc !important;
         z-index: 2;
     }
 
-    /* override Bootstrap striped rows */
-    .table-striped > tbody > tr.project-row:hover > * {
-        background-color: rgba(255, 193, 7, 0.18) !important;
+    .navbar .nav-link { color: #1e293b !important; }
+    .navbar .nav-link:hover { color: #000 !important; }
+
+    /* Dashboard header + pastel cards */
+    .dashboard-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.75rem;
     }
 
-    /* Navbar text color - dark gray */
-    .navbar .nav-link,
-    .navbar .navbar-text {
-        color: #333 !important;
+    .dashboard-welcome h1 {
+        font-weight: 700;
+        font-size: 1.75rem;
+        color: #1e293b;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.25rem;
     }
 
-    .navbar .nav-link:hover {
-        color: #000 !important;
+    .dashboard-welcome .text-muted {
+        font-size: 0.95rem;
+        color: #64748b !important;
     }
 
+    .expense-card {
+        border: none !important;
+        border-radius: var(--card-radius) !important;
+        box-shadow: var(--shadow-sm) !important;
+        transition: box-shadow 0.2s ease, transform 0.2s ease !important;
+    }
 
+    .expense-card:hover {
+        box-shadow: var(--shadow-md) !important;
+        transform: translateY(-3px) !important;
+    }
+
+    .expense-card[data-expense-type="Wages"] { background: var(--pastel-wages) !important; }
+    .expense-card[data-expense-type="Expenses"] { background: var(--pastel-expenses) !important; }
+    .expense-card[data-expense-type="Miscellaneous"] { background: var(--pastel-misc) !important; }
+
+    .expense-card .card-title i { font-size: 2rem !important; }
+    .expense-card[data-expense-type="Wages"] .card-title i { color: #f59e0b !important; }
+    .expense-card[data-expense-type="Expenses"] .card-title i { color: #16a34a !important; }
+    .expense-card[data-expense-type="Miscellaneous"] .card-title i { color: #2563eb !important; }
+
+    .expense-card h4 { font-weight: 600; color: #1e293b; }
+    .expense-card .text-muted { font-size: 0.9rem; color: #64748b !important; }
+
+    .content-card {
+        border: none;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .content-card .card-header {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: #fff;
+        font-weight: 600;
+        font-size: 1rem;
+        padding: 1rem 1.25rem;
+        border: none;
+    }
 </style>
 
 <body>
@@ -140,22 +208,24 @@
                     </li>
                     {% endif %}
 
-
-
-                    <!-- LOGOUT -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
-                    </li>
-
                 </ul>
 
-                <!-- RIGHT-SIDE TITLE + LOGO -->
-                <span class="navbar-text fw-bold text-dark d-flex align-items-center">
-                    Catering
-                    <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
-                        alt="WVC Logo"
-                        style="height: 28px; width: auto; margin-left: 10px;">
-                </span>
+                <!-- RIGHT-SIDE: Catering + Logo dropdown (Logout submenu) -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold text-dark d-flex align-items-center py-0"
+                           href="#" id="cateringNavDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <span>Catering</span>
+                            <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
+                                alt="WVC Logo"
+                                class="ms-2" style="height: 28px; width: auto;">
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="cateringNavDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
 
             </div>
         </div>
@@ -163,56 +233,57 @@
 
 
     <!-- Main Content -->
-    <div class="container mt-4">
+    <div class="container mt-4 pb-4">
         {% block content %}
-        <!-- Welcome Alert Card -->
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <h4 class="alert-heading mb-2">Welcome, {{ session.get('username', 'User') }}!</h4>
-            <p class="mb-0">Catering Department Dashboard</p>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <!-- Dashboard header: Welcome (left) -->
+        <div class="dashboard-header">
+            <div class="dashboard-welcome">
+                <h1>Welcome, {{ session.get('username', 'User') }}!</h1>
+                <p class="text-muted mb-0">Catering Department Dashboard</p>
+            </div>
         </div>
 
-        <!-- Expense Cards -->
-        <div class="row mt-3">
-            <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 expense-card" style="cursor: pointer; transition: transform 0.2s;" data-expense-type="Wages" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <div class="card-body text-center">
+        <!-- Pastel status / action cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Wages" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <div class="card-body text-center py-4">
                         <h5 class="card-title mb-3">
-                            <i class="bi bi-cash-stack" style="font-size: 2rem; color: #ffc107;"></i>
+                            <i class="bi bi-cash-stack"></i>
                         </h5>
                         <h4 class="mb-2">Wages</h4>
-                        <p class="text-muted mb-0">Enter employee wages</p>
+                        <p class="text-muted mb-0 small">Enter employee wages</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 expense-card" style="cursor: pointer; transition: transform 0.2s;" data-expense-type="Expenses" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <div class="card-body text-center">
+            <div class="col-md-4">
+                <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Expenses" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <div class="card-body text-center py-4">
                         <h5 class="card-title mb-3">
-                            <i class="bi bi-receipt" style="font-size: 2rem; color: #198754;"></i>
+                            <i class="bi bi-receipt"></i>
                         </h5>
                         <h4 class="mb-2">Expenses</h4>
-                        <p class="text-muted mb-0">Enter operational expenses</p>
+                        <p class="text-muted mb-0 small">Enter operational expenses</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 expense-card" style="cursor: pointer; transition: transform 0.2s;" data-expense-type="Miscellaneous" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <div class="card-body text-center">
+            <div class="col-md-4">
+                <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Miscellaneous" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <div class="card-body text-center py-4">
                         <h5 class="card-title mb-3">
-                            <i class="bi bi-piggy-bank" style="font-size: 2rem; color: #0d6efd;"></i>
+                            <i class="bi bi-piggy-bank"></i>
                         </h5>
                         <h4 class="mb-2">Miscellaneous</h4>
-                        <p class="text-muted mb-0">Enter miscellaneous expenses</p>
+                        <p class="text-muted mb-0 small">Enter miscellaneous expenses</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Confirmed Bookings List -->
-        <div class="card mt-4 shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                Confirmed Bookings
+        <div class="card content-card mt-4">
+            <div class="card-header">
+                <i class="bi bi-calendar-check me-2"></i>Confirmed Bookings
             </div>
             <div class="card-body">
                 {% if confirmed_bookings %}

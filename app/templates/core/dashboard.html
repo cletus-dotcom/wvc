@@ -327,7 +327,7 @@
         {% for venture in ventures %}
         <div class="col col-flex" style="flex: 1; min-width: 0; max-width: 360px;">
             <div class="venture-card text-center p-4 {{ venture.color }}"
-                onclick="{% if venture.name == 'Construction' %}window.location.href='{{ url_for('core.go_construction') }}'{% elif venture.name == 'Carenderia' %}redirectToCarenderia(){% else %}redirectToLogin('{{ venture.url }}'){% endif %}">
+                onclick="{% if venture.name == 'Construction' %}window.location.href='{{ url_for('core.go_construction') }}'{% elif venture.name == 'Carenderia' %}redirectToCarenderia(){% elif venture.name == 'Catering' %}{% if session.get('role') == 'Admin' or session.get('department') == 'Corporate' %}window.location.href='{{ url_for('catering.catering_home') }}'{% else %}redirectToLogin('{{ venture.url }}'){% endif %}{% else %}redirectToLogin('{{ venture.url }}'){% endif %}">
                 <div class="venture-icon">
                     <i class="bi {{ venture.icon }}"></i>
                 </div>

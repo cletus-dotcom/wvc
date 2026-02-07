@@ -8,10 +8,28 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <style>
+    :root {
+        --pastel-entry: #fce4ec;
+        --pastel-transactions: #e3f2fd;
+        --pastel-trial: #e8f5e9;
+        --pastel-wages: #fff3e0;
+        --card-radius: 12px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(160deg, #faf5f5 0%, #f5efef 100%);
+        min-height: 100vh;
+        color: #1e293b;
+    }
+
     .dropdown-menu .dropdown-item:hover {
-        background-color: #f8d7da !important;
+        background-color: #fce4ec !important;
         color: #000 !important;
     }
 
@@ -20,83 +38,149 @@
         color: white !important;
     }
 
-    /* Highlight table row on hover */
     .project-row {
         cursor: pointer;
-        transition: background-color 0.2s ease-in-out;
+        transition: background-color 0.2s ease;
     }
 
     .project-row:hover {
-        background-color: rgba(220, 53, 69, 0.12); /* subtle Bootstrap-danger tint */
+        background-color: rgba(220, 53, 69, 0.08) !important;
     }
 
-    /* Optional sticky table header */
-    thead th {
-        position: sticky;
-        top: 0;
-        background-color: #f8f9fa;
-        z-index: 2;
-    }
-
-    /* override Bootstrap striped rows */
     .table-striped > tbody > tr.project-row:hover > * {
-        background-color: rgba(220, 53, 69, 0.18) !important;
-    }
-
-    /* Transaction table styling */
-    #transactionsTableBody tr:nth-child(even) {
-        background-color: #f8f9fa;
-    }
-
-    #transactionsTableBody tr:nth-child(odd) {
-        background-color: #e7f3ff;
-    }
-
-    #transactionsTableBody tr:hover {
         background-color: rgba(220, 53, 69, 0.1) !important;
     }
 
+    thead th {
+        position: sticky;
+        top: 0;
+        background: #f8fafc !important;
+        z-index: 2;
+    }
+
+    #transactionsTableBody tr:nth-child(even) {
+        background-color: #fafafa;
+    }
+
+    #transactionsTableBody tr:nth-child(odd) {
+        background-color: #fff;
+    }
+
+    #transactionsTableBody tr:hover {
+        background-color: rgba(220, 53, 69, 0.06) !important;
+    }
+
     .purchases-expandable:hover {
-        background-color: rgba(220, 53, 69, 0.15) !important;
+        background-color: rgba(220, 53, 69, 0.08) !important;
     }
 
-    .purchases-items-row td {
-        border-top: none !important;
-    }
-
+    .purchases-items-row td { border-top: none !important; }
     .wages-expandable:hover {
-        background-color: rgba(220, 53, 69, 0.15) !important;
+        background-color: rgba(220, 53, 69, 0.08) !important;
+    }
+    .wages-items-row td { border-top: none !important; }
+
+    #purchasesItemsTableBody .purchase-desc { min-width: 200px; }
+    .table-responsive { max-height: 500px; overflow-y: auto; }
+    .form-label { font-size: 0.85rem; }
+    .form-control { font-size: 0.9rem; }
+    .card-body .rounded { border: 1px solid rgba(0,0,0,0.08); }
+
+    /* Dashboard header + pastel status cards */
+    .dashboard-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.75rem;
     }
 
-    .wages-items-row td {
-        border-top: none !important;
+    .dashboard-welcome h1 {
+        font-weight: 700;
+        font-size: 1.75rem;
+        color: #1e293b;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.25rem;
     }
 
-    /* Widen description column in purchases table */
-    #purchasesItemsTableBody .purchase-desc {
-        min-width: 200px;
+    .dashboard-welcome .text-muted {
+        font-size: 0.95rem;
+        color: #64748b !important;
     }
 
-    .table-responsive {
-        max-height: 500px;
-        overflow-y: auto;
+    .dashboard-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: stretch;
     }
 
-    /* Form input styling */
-    .form-label {
+    .dash-card {
+        display: block;
+        border: none;
+        border-radius: var(--card-radius);
+        padding: 1rem 1.25rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+        min-width: 120px;
+    }
+
+    .dash-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+        color: inherit;
+    }
+
+    .dash-card.dash-card-main {
+        min-width: 130px;
+        padding: 1.25rem 1.5rem;
+        background: var(--pastel-entry) !important;
+    }
+
+    .dash-card.dash-card-transactions { background: var(--pastel-transactions) !important; }
+    .dash-card.dash-card-trial { background: var(--pastel-trial) !important; }
+    .dash-card.dash-card-wages { background: var(--pastel-wages) !important; }
+
+    .dash-card .dash-card-title {
         font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.2rem;
     }
 
-    .form-control {
-        font-size: 0.9rem;
+    .dash-card .dash-card-desc {
+        font-size: 0.75rem;
+        color: #64748b;
     }
 
-    /* Summary panel styling */
-    .card-body .rounded {
-        border: 1px solid rgba(0,0,0,0.1);
+    /* Modern content cards */
+    .content-card {
+        border: none;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
     }
 
+    .content-card .card-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: #fff;
+        font-weight: 600;
+        font-size: 1rem;
+        padding: 1rem 1.25rem;
+        border: none;
+    }
 
+    .content-card .card-body {
+        background: #fff;
+    }
+
+    .running-balance-card .bg-warning {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important;
+        border: 1px solid #ffcc80;
+    }
 </style>
 
 <body>
@@ -203,22 +287,24 @@
                     </li>
                     {% endif %}
 
-
-
-                    <!-- LOGOUT -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
-                    </li>
-
                 </ul>
 
-                <!-- RIGHT-SIDE TITLE + LOGO -->
-                <span class="navbar-text fw-bold text-white d-flex align-items-center">
-                    Carenderia
-                    <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
-                        alt="WVC Logo"
-                        style="height: 28px; width: auto; margin-left: 10px;">
-                </span>
+                <!-- RIGHT-SIDE: Carenderia + Logo dropdown (Logout submenu) -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold text-white d-flex align-items-center py-0"
+                           href="#" id="carenderiaNavDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <span>Carenderia</span>
+                            <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
+                                alt="WVC Logo"
+                                class="ms-2" style="height: 28px; width: auto;">
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="carenderiaNavDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
 
             </div>
         </div>
@@ -226,19 +312,40 @@
 
 
     <!-- Main Content -->
-    <div class="container mt-4">
+    <div class="container mt-4 pb-4">
         {% block content %}
-        <!-- Welcome Alert Card -->
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <h4 class="alert-heading mb-2">Welcome, {{ session.get('username', 'User') }}!</h4>
-            <p class="mb-0">Carenderia Department Dashboard</p>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <!-- Dashboard header: Welcome (left) + Pastel quick-link cards (right) -->
+        <div class="dashboard-header">
+            <div class="dashboard-welcome">
+                <h1>Welcome, {{ session.get('username', 'User') }}!</h1>
+                <p class="text-muted mb-0">Carenderia Department Dashboard</p>
+            </div>
+            <div class="dashboard-cards">
+                <a href="#entryFormCard" class="dash-card dash-card-main">
+                    <div class="dash-card-title">New Entry</div>
+                    <div class="dash-card-desc">Entry Form</div>
+                </a>
+                {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
+                <a href="{{ url_for('carenderia.view_transactions') }}" class="dash-card dash-card-transactions">
+                    <div class="dash-card-title">Transactions</div>
+                    <div class="dash-card-desc">View by date</div>
+                </a>
+                <a href="{{ url_for('carenderia.monthly_trial_balance') }}" class="dash-card dash-card-trial">
+                    <div class="dash-card-title">Trial Balance</div>
+                    <div class="dash-card-desc">Monthly</div>
+                </a>
+                <a href="{{ url_for('carenderia.view_wages_report') }}" class="dash-card dash-card-wages">
+                    <div class="dash-card-title">Wages Report</div>
+                    <div class="dash-card-desc">View report</div>
+                </a>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Entry Form Card -->
-        <div class="card mt-4 shadow-sm">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">Entry Form</h5>
+        <div id="entryFormCard" class="card content-card mt-4">
+            <div class="card-header">
+                <i class="bi bi-pencil-square me-2"></i>Entry Form
             </div>
             <div class="card-body">
                 <form id="entryForm">
@@ -448,9 +555,9 @@
         </div>
 
         <!-- Transactions Table -->
-        <div class="card mt-4 shadow-sm">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Transaction Records</h5>
+        <div class="card content-card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul me-2"></i>Transaction Records</span>
                 <button type="button" class="btn btn-light btn-sm" id="submitTransactionsBtn">
                     Submit Transaction
                 </button>
@@ -478,15 +585,15 @@
         </div>
 
         <!-- Running Balance Card -->
-        <div class="card mt-4 shadow-sm">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">Running Balance</h5>
+        <div class="card content-card running-balance-card mt-4">
+            <div class="card-header">
+                <i class="bi bi-calculator me-2"></i>Running Balance
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded" style="border-radius: 8px;">
                                 <span class="fw-bold">Daily Collection</span>
                                 <span class="fw-bold" id="runningDailyCollection">0.00</span>
                             </div>
@@ -520,7 +627,7 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center p-3 bg-warning text-dark rounded">
+                        <div class="d-flex justify-content-between align-items-center p-3 bg-warning text-dark rounded running-balance-card">
                             <span class="fw-bold fs-5">Total Amount (Daily Collection - Deductions)</span>
                             <span class="fw-bold fs-5" id="runningNetAmount">0.00</span>
                         </div>

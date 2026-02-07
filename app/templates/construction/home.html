@@ -7,10 +7,28 @@
     <title>Construction Home</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <style>
+    :root {
+        --pastel-total: #d4e8f7;
+        --pastel-planned: #d5f0dc;
+        --pastel-ongoing: #fff0d4;
+        --pastel-completed: #e8ddf5;
+        --card-radius: 12px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    body {
+        background: linear-gradient(160deg, #f5f7fa 0%, #eef1f5 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
     .dropdown-menu .dropdown-item:hover {
-        background-color: #add8e6 !important;
+        background-color: #e8f4fc !important;
         color: #000 !important;
     }
 
@@ -19,30 +37,166 @@
         color: white !important;
     }
 
-    /* Highlight table row on hover */
     .project-row {
         cursor: pointer;
-        transition: background-color 0.2s ease-in-out;
+        transition: background-color 0.2s ease, transform 0.15s ease;
     }
 
     .project-row:hover {
-        background-color: rgba(13, 110, 253, 0.12); /* subtle Bootstrap-primary tint */
+        background-color: rgba(13, 110, 253, 0.06) !important;
     }
 
-    /* Optional sticky table header */
+    .table-striped > tbody > tr.project-row:hover > * {
+        background-color: rgba(13, 110, 253, 0.08) !important;
+    }
+
     thead th {
         position: sticky;
         top: 0;
-        background-color: #f8f9fa;
+        background: #f8fafc !important;
         z-index: 2;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
     }
 
-    /* override Bootstrap striped rows */
-    .table-striped > tbody > tr.project-row:hover > * {
-        background-color: rgba(13, 110, 253, 0.18) !important;
+    .header-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.75rem;
     }
 
+    .header-welcome h1 {
+        font-weight: 700;
+        font-size: 1.75rem;
+        color: #1e293b;
+        letter-spacing: -0.02em;
+    }
 
+    .header-welcome .text-muted {
+        font-size: 0.95rem;
+        color: #64748b !important;
+    }
+
+    .header-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+
+    .stat-card {
+        border: none;
+        border-radius: var(--card-radius);
+        padding: 1rem 1.35rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .stat-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .stat-card.stat-card-main {
+        min-width: 130px;
+        padding: 1.35rem 1.75rem;
+        background: var(--pastel-total) !important;
+    }
+
+    .stat-card.stat-card-planned {
+        background: var(--pastel-planned) !important;
+    }
+
+    .stat-card.stat-card-ongoing {
+        background: var(--pastel-ongoing) !important;
+    }
+
+    .stat-card.stat-card-completed {
+        background: var(--pastel-completed) !important;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.2;
+    }
+
+    .stat-card.stat-card-main .stat-value {
+        font-size: 2.35rem;
+        color: #0c4a6e;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: #475569;
+        margin-top: 0.35rem;
+        letter-spacing: 0.02em;
+    }
+
+    .projects-card {
+        border: none;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .projects-card .card-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: #fff;
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+        padding: 1rem 1.25rem;
+        border: none;
+    }
+
+    .projects-card .card-body {
+        background: #fff;
+        padding: 1.25rem;
+    }
+
+    .projects-card .form-control {
+        border-radius: 8px;
+        border-color: #e2e8f0;
+    }
+
+    .projects-card .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    }
+
+    .projects-card .input-group {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .projects-card .input-group-text {
+        border-color: #e2e8f0;
+        background: #f8fafc;
+    }
+
+    .projects-card .table {
+        border-radius: 0 0 var(--card-radius) var(--card-radius);
+    }
+
+    .projects-card .table td {
+        vertical-align: middle;
+        padding: 0.85rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .container.mt-4 {
+        padding-bottom: 2rem;
+    }
 </style>
 
 <body>
@@ -151,22 +305,24 @@
 
                     {% endif %}
 
-
-
-                    <!-- LOGOUT -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
-                    </li>
-
                 </ul>
 
-                <!-- RIGHT-SIDE TITLE + LOGO -->
-                <span class="navbar-text fw-bold text-white d-flex align-items-center">
-                    Construction
-                    <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
-                        alt="WVC Logo"
-                        style="height: 28px; width: auto; margin-left: 10px;">
-                </span>
+                <!-- RIGHT-SIDE: Construction + Logo dropdown (Logout submenu) -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold text-white d-flex align-items-center py-0"
+                           href="#" id="constructionNavDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <span>Construction</span>
+                            <img src="{{ url_for('static', filename='images/wvc_logo.png') }}"
+                                alt="WVC Logo"
+                                class="ms-2" style="height: 28px; width: auto;">
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="constructionNavDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
 
             </div>
         </div>
@@ -176,24 +332,50 @@
     <!-- Main Content -->
     <div class="container mt-4">
         {% block content %}
-        <h1>Welcome, {{ session.get('username', 'User') }}!</h1>
-        <p>Select a project to continue.</p>
+        <!-- Header: two columns - Welcome (left), Status cards (right) -->
+        <div class="header-row">
+            <div class="header-welcome">
+                <h1 class="mb-1">Welcome, {{ session.get('username', 'User') }}!</h1>
+                <p class="text-muted mb-0">Select a project to continue.</p>
+            </div>
+            <div class="header-cards">
+                <div class="stat-card stat-card-main">
+                    <div class="stat-value">{{ project_counts.total }}</div>
+                    <div class="stat-label">No. of Projects</div>
+                </div>
+                <div class="stat-card stat-card-planned">
+                    <div class="stat-value">{{ project_counts.planned }}</div>
+                    <div class="stat-label">Planned</div>
+                </div>
+                <div class="stat-card stat-card-ongoing">
+                    <div class="stat-value">{{ project_counts.ongoing }}</div>
+                    <div class="stat-label">On-going</div>
+                </div>
+                <div class="stat-card stat-card-completed">
+                    <div class="stat-value">{{ project_counts.completed }}</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+        </div>
 
         <!-- List of Projects Card -->
-        <div class="card mt-4 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                List of Projects
+        <div class="card projects-card mt-4">
+            <div class="card-header">
+                <i class="bi bi-folder2-open me-2"></i>List of Projects
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <input type="text"
-                           class="form-control form-control-lg"
-                           id="projectSearch"
-                           placeholder="Search by project name, site, contractor, status..."
-                           autocomplete="off">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text"
+                               class="form-control form-control-lg border-start-0"
+                               id="projectSearch"
+                               placeholder="Search by project name, site, contractor, status..."
+                               autocomplete="off">
+                    </div>
                 </div>
-                <div class="table-responsive p-0">
-                    <table class="table table-striped mb-0">
+                <div class="table-responsive p-0 rounded">
+                    <table class="table table-hover table-striped mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Project Name</th>
