@@ -528,6 +528,98 @@ def manage_bookings():
     )
 
 
+@catering_bp.route("/view-collectibles")
+@login_required
+def view_collectibles():
+    """View all bookings that have a balance (not fully paid). Accessible to Admin or Corporate."""
+    user_role = (session.get("role") or "").lower()
+    user_dept = (session.get("department") or "").lower()
+    if user_role != "admin" and user_dept != "corporate":
+        flash("You do not have permission to access this page.", "danger")
+        return redirect(url_for("catering.catering_home"))
+
+    # Bookings with at least one payment transaction: get total paid and total due per booking
+    rows = (
+        db.session.query(
+            CateringTransaction.booking_id,
+            func.max(CateringTransaction.booking_amount).label("total_due"),
+            func.coalesce(func.sum(CateringTransaction.trans_amount), 0).label("total_paid"),
+        )
+        .filter(CateringTransaction.booking_id.isnot(None))
+        .filter(CateringTransaction.booking_amount.isnot(None))
+        .group_by(CateringTransaction.booking_id)
+    ).all()
+
+    # Collect booking IDs that have balance (total_paid < total_due)
+    booking_ids_with_balance = []
+    collectibles_data = {}  # booking_id -> { total_due, total_paid, balance }
+    for r in rows:
+        bid, total_due, total_paid = r.booking_id, (r.total_due or Decimal("0")), (r.total_paid or Decimal("0"))
+        if total_paid < total_due:
+            booking_ids_with_balance.append(bid)
+            collectibles_data[bid] = {
+                "total_due": total_due,
+                "total_paid": total_paid,
+                "balance": total_due - total_paid,
+            }
+
+    # Bookings with no transactions at all (unpaid)
+    subq = db.session.query(CateringTransaction.booking_id).filter(CateringTransaction.booking_id.isnot(None)).distinct()
+    unpaid_booking_ids = [
+        x[0] for x in
+        db.session.query(CateringRequest.id)
+        .filter(CateringRequest.status != "Cancelled")
+        .filter(~CateringRequest.id.in_(subq))
+        .all()
+    ]
+
+    # Load full booking objects: those with balance or unpaid
+    all_collectible_ids = list(set(booking_ids_with_balance) | set(unpaid_booking_ids))
+    bookings = (
+        CateringRequest.query.filter(CateringRequest.id.in_(all_collectible_ids))
+        .order_by(CateringRequest.event_date.desc(), CateringRequest.event_time.desc())
+        .all()
+    ) if all_collectible_ids else []
+
+    # Load payment transactions per booking (for expandable history)
+    all_bids = [b.id for b in bookings]
+    transactions_by_booking = {}
+    if all_bids:
+        pay_rows = (
+            CateringTransaction.query.filter(CateringTransaction.booking_id.in_(all_bids))
+            .filter(CateringTransaction.booking_id.isnot(None))
+            .order_by(CateringTransaction.date.asc(), CateringTransaction.id.asc())
+            .all()
+        )
+        for t in pay_rows:
+            transactions_by_booking.setdefault(t.booking_id, []).append(t)
+
+    # Build list with balance info and payment history for template
+    collectibles = []
+    for b in bookings:
+        payments = transactions_by_booking.get(b.id) or []
+        if b.id in collectibles_data:
+            collectibles.append({
+                "booking": b,
+                "total_due": collectibles_data[b.id]["total_due"],
+                "total_paid": collectibles_data[b.id]["total_paid"],
+                "balance": collectibles_data[b.id]["balance"],
+                "unpaid_only": False,
+                "payments": payments,
+            })
+        else:
+            collectibles.append({
+                "booking": b,
+                "total_due": None,
+                "total_paid": Decimal("0"),
+                "balance": None,
+                "unpaid_only": True,
+                "payments": payments,
+            })
+
+    return render_template("catering/view_collectibles.html", collectibles=collectibles)
+
+
 @catering_bp.route("/add-booking", methods=["POST"])
 @login_required
 def add_booking():

@@ -13,6 +13,7 @@
 </head>
 <style>
     :root {
+        --pastel-collectibles: #f3e5f5;
         --pastel-wages: #fff8e1;
         --pastel-expenses: #e8f5e9;
         --pastel-misc: #e3f2fd;
@@ -95,11 +96,13 @@
         transform: translateY(-3px) !important;
     }
 
+    .expense-card[data-expense-type="Collectibles"] { background: var(--pastel-collectibles) !important; }
     .expense-card[data-expense-type="Wages"] { background: var(--pastel-wages) !important; }
     .expense-card[data-expense-type="Expenses"] { background: var(--pastel-expenses) !important; }
     .expense-card[data-expense-type="Miscellaneous"] { background: var(--pastel-misc) !important; }
 
     .expense-card .card-title i { font-size: 2rem !important; }
+    .expense-card[data-expense-type="Collectibles"] .card-title i { color: #7c3aed !important; }
     .expense-card[data-expense-type="Wages"] .card-title i { color: #f59e0b !important; }
     .expense-card[data-expense-type="Expenses"] .card-title i { color: #16a34a !important; }
     .expense-card[data-expense-type="Miscellaneous"] .card-title i { color: #2563eb !important; }
@@ -184,13 +187,20 @@
                     {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle fw-bold
-                            {% if request.endpoint in ['catering.view_wages', 'catering.view_balance_sheet'] %}active{% endif %}"
+                            {% if request.endpoint in ['catering.view_wages', 'catering.view_balance_sheet', 'catering.view_collectibles'] %}active{% endif %}"
                         href="#" id="corporateDropdown" role="button"
                         data-bs-toggle="dropdown">
                             Corporate
                         </a>
 
                         <ul class="dropdown-menu" aria-labelledby="corporateDropdown">
+                            <!-- View Collectibles -->
+                            <li>
+                                <a class="dropdown-item"
+                                href="{{ url_for('catering.view_collectibles') }}">
+                                    View Collectibles
+                                </a>
+                            </li>
                             <!-- View Wages -->
                             <li>
                                 <a class="dropdown-item"
@@ -246,7 +256,22 @@
 
         <!-- Pastel status / action cards -->
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
+            {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
+            <div class="col-md-3 col-6">
+                <a href="{{ url_for('catering.view_collectibles') }}" class="text-decoration-none text-dark">
+                    <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Collectibles">
+                        <div class="card-body text-center py-4">
+                            <h5 class="card-title mb-3">
+                                <i class="bi bi-wallet2"></i>
+                            </h5>
+                            <h4 class="mb-2">View Collectibles</h4>
+                            <p class="text-muted mb-0 small">Bookings with balance or not paid</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+            <div class="col-md-{% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}3{% else %}4{% endif %} col-6">
                 <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Wages" data-bs-toggle="modal" data-bs-target="#expenseModal">
                     <div class="card-body text-center py-4">
                         <h5 class="card-title mb-3">
@@ -257,7 +282,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-{% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}3{% else %}4{% endif %} col-6">
                 <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Expenses" data-bs-toggle="modal" data-bs-target="#expenseModal">
                     <div class="card-body text-center py-4">
                         <h5 class="card-title mb-3">
@@ -268,7 +293,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-{% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}3{% else %}4{% endif %} col-6">
                 <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Miscellaneous" data-bs-toggle="modal" data-bs-target="#expenseModal">
                     <div class="card-body text-center py-4">
                         <h5 class="card-title mb-3">

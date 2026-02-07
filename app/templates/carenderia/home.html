@@ -724,13 +724,20 @@
         
         // Store purchase items
         let purchaseItems = [];
-        let purchaseReferenceCounter = 1;
 
-        // Generate purchase reference number
-        function generatePurchaseReference() {
-            const date = new Date();
-            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-            return `PUR-${dateStr}-${String(purchaseReferenceCounter).padStart(4, '0')}`;
+        // Fetch next purchase reference (PUR-YYYY-MM-DD-###) from server
+        async function fetchNextPurchaseReference() {
+            const dateInput = document.getElementById('entryDate');
+            const dateStr = (dateInput && dateInput.value) || new Date().toISOString().slice(0, 10);
+            try {
+                const url = '{{ url_for("carenderia.next_purchase_reference") }}?date=' + encodeURIComponent(dateStr);
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (resp.ok && data.success && data.referenceNumber) {
+                    return data.referenceNumber;
+                }
+            } catch (e) { console.warn('Next purchase reference:', e); }
+            return 'PUR-' + dateStr + '-001';
         }
 
         // Show/hide fields based on transaction type
@@ -778,10 +785,19 @@
             }
         });
 
+        // When entry date changes and Purchases is selected, refresh reference number
+        document.getElementById('entryDate').addEventListener('change', async function() {
+            if (document.getElementById('transactionType').value === 'Purchases') {
+                const ref = await fetchNextPurchaseReference();
+                document.getElementById('purchasesReference').value = ref;
+            }
+        });
+
         // Initialize purchases form
-        function initializePurchasesForm() {
-            // Generate reference number
-            document.getElementById('purchasesReference').value = generatePurchaseReference();
+        async function initializePurchasesForm() {
+            // Fetch and show next reference number (PUR-YYYY-MM-DD-###)
+            const ref = await fetchNextPurchaseReference();
+            document.getElementById('purchasesReference').value = ref;
             // Reset purchase items table to have one empty row
             const tbody = document.getElementById('purchasesItemsTableBody');
             tbody.innerHTML = `
@@ -1431,7 +1447,6 @@
                 document.getElementById('amount').readOnly = false;
                 document.getElementById('transactionType').value = '';
                 purchaseItems = [];
-                purchaseReferenceCounter++;
                 initializePurchasesForm();
                 return;
             }

@@ -231,11 +231,38 @@ def save_wages():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+def _next_purchase_reference_for_date(parsed_date, same_date_count=0):
+    """Return next PUR-(date)-### for the given date. same_date_count = how many Purchases for this date we're adding in current batch."""
+    existing = CarenderiaTransaction.query.filter(
+        CarenderiaTransaction.date == parsed_date,
+        CarenderiaTransaction.trans_type == "Purchases"
+    ).count()
+    seq = existing + same_date_count + 1
+    return f"PUR-{parsed_date.strftime('%Y-%m-%d')}-{seq:03d}"
+
+
+@carenderia_bp.route("/next-purchase-reference")
+@login_required
+@department_required("Carenderia", "Corporate")
+def next_purchase_reference():
+    """Return the next Purchase reference number for a date. Query: date=YYYY-MM-DD (default: today)."""
+    date_str = request.args.get("date", "")
+    if not date_str:
+        parsed_date = date.today()
+    else:
+        try:
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_date = date.today()
+    ref = _next_purchase_reference_for_date(parsed_date, same_date_count=0)
+    return jsonify({"success": True, "referenceNumber": ref})
+
+
 @carenderia_bp.post("/save-transactions")
 @login_required
 @department_required("Carenderia", "Corporate")
 def save_transactions():
-    """Save transactions to carenderia_transaction table. For Purchases, saves reference_number and items."""
+    """Save transactions to carenderia_transaction table. For Purchases, saves reference_number (PUR-date-###) and items."""
     data = request.get_json() or {}
     transactions = data.get("transactions", [])
 
@@ -243,6 +270,8 @@ def save_transactions():
         return jsonify({"success": False, "error": "No transactions provided."}), 400
 
     try:
+        # Track how many Purchases we've added per date in this batch (for auto-increment)
+        purchases_count_per_date = {}
         for trans in transactions:
             trans_date = trans.get("date")
             trans_type = trans.get("transactionType")
@@ -256,7 +285,13 @@ def save_transactions():
             except ValueError:
                 continue
 
-            reference_number = trans.get("referenceNumber") if trans_type == "Purchases" else None
+            if trans_type == "Purchases":
+                already_in_batch = purchases_count_per_date.get(parsed_date, 0)
+                reference_number = _next_purchase_reference_for_date(parsed_date, same_date_count=already_in_batch)
+                purchases_count_per_date[parsed_date] = already_in_batch + 1
+            else:
+                reference_number = None
+
             transaction = CarenderiaTransaction(
                 date=parsed_date,
                 trans_type=trans_type,
