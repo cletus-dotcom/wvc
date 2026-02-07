@@ -224,9 +224,25 @@
             flex-wrap: nowrap;
             justify-content: center;
         }
+        .row.ventures-row .ventures-col {
+            flex: 1;
+            min-width: 0;
+            max-width: 360px;
+        }
+        /* Mobile: 3 rows, one venture per row */
         @media (max-width: 767.98px) {
-            .row.ventures-row { flex-wrap: wrap; }
-            .row.ventures-row .col-flex { flex: 1 1 100%; max-width: 100%; }
+            .row.ventures-row {
+                flex-direction: column;
+                flex-wrap: nowrap;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            .row.ventures-row .ventures-col {
+                flex: 0 0 auto;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
         }
         /* Ensure equal height across all columns in a row */
         .col-flex {
@@ -328,10 +344,10 @@
     <!-- Logo -->
     <img src="{{ url_for('static', filename='images/wvc_logo.png') }}" alt="WVC Logo" class="logo">
 
-    <!-- Ventures: one row -->
+    <!-- Ventures: one row on desktop, 3 rows on mobile -->
     <div class="row ventures-row mb-4">
         {% for venture in ventures %}
-        <div class="col col-flex" style="flex: 1; min-width: 0; max-width: 360px;">
+        <div class="col col-flex ventures-col">
             <div class="venture-card text-center p-4 {{ venture.color }}"
                 onclick="{% if venture.name == 'Construction' %}window.location.href='{{ url_for('core.go_construction') }}'{% elif venture.name == 'Carenderia' %}redirectToCarenderia(){% elif venture.name == 'Catering' %}{% if session.get('role') == 'Admin' or session.get('department') == 'Corporate' %}window.location.href='{{ url_for('catering.catering_home') }}'{% else %}redirectToLogin('{{ venture.url }}'){% endif %}{% else %}redirectToLogin('{{ venture.url }}'){% endif %}">
                 <div class="venture-icon">
