@@ -1,257 +1,281 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Update Project</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Update Project — Construction</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/wvc_logo.ico') }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-
     <style>
+        body {
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
         tr.project-row:hover {
             background: #eef2ff;
             cursor: pointer;
         }
+        /* Touch-friendly: 16px inputs, 44px min tap targets */
+        .form-control, .form-select {
+            font-size: 16px !important;
+        }
+        .btn {
+            min-height: 44px;
+            padding: 0.5rem 1rem;
+        }
+        .btn-sm { min-height: 38px; }
+        .page-title { font-size: 1.5rem; }
+        @media (min-width: 576px) { .page-title { font-size: 1.75rem; } }
+        /* Header stacks on small screens */
+        .page-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        @media (min-width: 576px) {
+            .page-header { flex-direction: row; align-items: center; gap: 0; }
+        }
+        .page-header .btn { min-width: 100%; }
+        @media (min-width: 576px) { .page-header .btn { min-width: auto; } }
+        /* Table: horizontal scroll on mobile, readable cells */
+        .table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -0.5rem;
+            padding: 0 0.5rem;
+        }
+        .table-wrap .table {
+            min-width: 520px;
+            margin-bottom: 0;
+        }
+        .table-wrap th, .table-wrap td {
+            white-space: nowrap;
+        }
+        @media (min-width: 576px) {
+            .table-wrap th:nth-child(1), .table-wrap td:nth-child(1) { white-space: normal; min-width: 120px; }
+            .table-wrap th:nth-child(2), .table-wrap td:nth-child(2) { white-space: normal; min-width: 100px; }
+        }
+        .action-cell .btn { white-space: nowrap; }
+        /* Pagination: larger tap targets on mobile */
+        .pagination .page-link {
+            min-height: 44px;
+            padding: 0.5rem 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Modal: fullscreen on small screens, form stacks */
+        @media (max-width: 575.98px) {
+            #editModal .modal-dialog { margin: 0.5rem; max-width: calc(100% - 1rem); }
+            #editModal .modal-body .col-md-6, #editModal .modal-body .col-md-4, #editModal .modal-body .col-md-12 {
+                flex: 0 0 100%; max-width: 100%;
+            }
+            #editModal .modal-footer { flex-wrap: wrap; }
+            #editModal .modal-footer .btn { flex: 1 1 100%; min-width: 0; }
+        }
+        #editModal .modal-footer .btn { min-height: 44px; }
     </style>
 </head>
+<body class="bg-light">
 
-<body class="bg-light p-4">
-
-<div class="container">
-
+<div class="container py-3 py-md-4 px-3">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">Update Project</h2>
-        <a href="{{ url_for('construction.construction_home') }}" class="btn btn-secondary">
-            ⬅ Back to Home
-        </a>
+    <div class="d-flex page-header justify-content-between align-items-center mb-3">
+        <h1 class="page-title mb-0">Update Project</h1>
+        <a href="{{ url_for('construction.construction_home') }}" class="btn btn-secondary">← Back to Home</a>
     </div>
 
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         {% for cat, msg in messages %}
-            <div class="alert alert-{{ cat }}">{{ msg }}</div>
+            <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
         {% endfor %}
     {% endif %}
     {% endwith %}
 
-    <!-- Search Bar -->
+    <!-- Search -->
     <div class="input-group mb-3">
-        <input id="searchBox" type="text" class="form-control" placeholder="Search project...">
+        <input id="searchBox" type="text" class="form-control" placeholder="Search project..." aria-label="Search projects">
         <span class="input-group-text">🔍</span>
     </div>
 
     <!-- Table -->
-    <table id="projectTable" class="table table-bordered bg-white shadow-sm">
-        <thead class="table-dark">
-            <tr>
-                <th>Project Name</th>
-                <th>Contractor</th>
-                <th>Duration (days)</th>
-                <th>Status</th>
-                <th class="text-center">Action</th>
-            </tr>
-        </thead>
+    <div class="table-wrap">
+        <table id="projectTable" class="table table-bordered bg-white shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Project Name</th>
+                    <th>Contractor</th>
+                    <th>Duration (days)</th>
+                    <th>Status</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in projects %}
+                <tr class="project-row"
+                    data-id="{{ p.id }}"
+                    data-name="{{ p.project_name }}"
+                    data-contractor="{{ p.contractor_name }}"
+                    data-site="{{ p.project_site }}"
+                    data-ntp="{{ p.ntp_date }}"
+                    data-complete="{{ p.completion_date }}"
+                    data-duration="{{ p.contract_duration }}"
+                    data-price="{{ p.contract_price }}"
+                    data-status="{{ p.status }}">
+                    <td>{{ p.project_name }}</td>
+                    <td>{{ p.contractor_name }}</td>
+                    <td>{{ p.contract_duration }}</td>
+                    <td>{{ p.status }}</td>
+                    <td class="text-center action-cell">
+                        <a href="{{ url_for('construction.edit_project_entries', project_id=p.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">Edit Entry</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-        <tbody>
-        {% for p in projects %}
-            <tr class="project-row"
-                data-id="{{ p.id }}"
-                data-name="{{ p.project_name }}"
-                data-contractor="{{ p.contractor_name }}"
-                data-site="{{ p.project_site }}"
-                data-ntp="{{ p.ntp_date }}"
-                data-complete="{{ p.completion_date }}"
-                data-duration="{{ p.contract_duration }}"
-                data-price="{{ p.contract_price }}"
-                data-status="{{ p.status }}">
-
-                <td>{{ p.project_name }}</td>
-                <td>{{ p.contractor_name }}</td>
-                <td>{{ p.contract_duration }}</td>
-                <td>{{ p.status }}</td>
-                <td class="text-center">
-                    <a href="{{ url_for('construction.edit_project_entries', project_id=p.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">Edit Entry</a>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Pagination -->
-    <nav>
-        <ul class="pagination" id="pagination"></ul>
+    <nav class="mt-3" aria-label="Project list pagination">
+        <ul class="pagination flex-wrap justify-content-center mb-0" id="pagination"></ul>
     </nav>
-
 </div>
 
-
-<!-- ⭐ REUSABLE EDIT MODAL -->
-<div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <form method="POST" id="editForm" class="modal-content">
-
             <div class="modal-header">
-                <h5 class="modal-title">Edit Project</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="editModalTitle">Edit Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
-            <div class="modal-body row g-3">
-
-                <div class="col-md-6">
-                    <label>Project Name</label>
-                    <input name="project_name" id="edit_project_name" class="form-control">
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="edit_project_name" class="form-label">Project Name</label>
+                        <input name="project_name" id="edit_project_name" class="form-control">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="edit_contractor_name" class="form-label">Contractor Name</label>
+                        <input name="contractor_name" id="edit_contractor_name" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label for="edit_project_site" class="form-label">Project Site</label>
+                        <textarea name="project_site" id="edit_project_site" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="edit_ntp_date" class="form-label">NTP Date</label>
+                        <input type="date" name="ntp_date" id="edit_ntp_date" class="form-control">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="edit_completion_date" class="form-label">Completion Date</label>
+                        <input type="date" name="completion_date" id="edit_completion_date" class="form-control">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="edit_duration" class="form-label">Duration (days)</label>
+                        <input type="number" name="contract_duration" id="edit_duration" class="form-control" min="0" inputmode="numeric">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="edit_price" class="form-label">Contract Price</label>
+                        <input type="number" step="0.01" name="contract_price" id="edit_price" class="form-control" min="0" inputmode="decimal">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="edit_status" class="form-label">Status</label>
+                        <select name="status" id="edit_status" class="form-select">
+                            <option value="planning">Planning</option>
+                            <option value="ongoing">Ongoing</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
                 </div>
-
-                <div class="col-md-6">
-                    <label>Contractor Name</label>
-                    <input name="contractor_name" id="edit_contractor_name" class="form-control">
-                </div>
-
-                <div class="col-md-12">
-                    <label>Project Site</label>
-                    <textarea name="project_site" id="edit_project_site" class="form-control"></textarea>
-                </div>
-
-                <div class="col-md-6">
-                    <label>NTP Date</label>
-                    <input type="date" name="ntp_date" id="edit_ntp_date" class="form-control">
-                </div>
-
-                <div class="col-md-6">
-                    <label>Completion Date</label>
-                    <input type="date" name="completion_date" id="edit_completion_date" class="form-control">
-                </div>
-
-                <div class="col-md-4">
-                    <label>Duration (days)</label>
-                    <input type="number" name="contract_duration" id="edit_duration" class="form-control">
-                </div>
-
-                <div class="col-md-4">
-                    <label>Contract Price</label>
-                    <input type="number" step="0.01" name="contract_price" id="edit_price" class="form-control">
-                </div>
-
-                <div class="col-md-4">
-                    <label>Status</label>
-                    <select name="status" id="edit_status" class="form-control">
-                        <option value="planning">Planning</option>
-                        <option value="ongoing">Ongoing</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
-
             </div>
-
-            <div class="modal-footer d-flex justify-content-between">
-                <button id="deleteBtn" type="button" class="btn btn-danger">Delete</button>
-                <button class="btn btn-primary">Update</button>
+            <div class="modal-footer d-flex flex-wrap gap-2">
+                <button type="button" id="deleteBtn" class="btn btn-danger">Delete</button>
+                <button type="submit" class="btn btn-primary">Update</button>
             </div>
-
         </form>
     </div>
 </div>
 
-
-<!-- ⭐ REUSABLE DELETE MODAL -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog">
         <form method="POST" id="deleteForm" class="modal-content">
-
             <div class="modal-header">
-                <h5 class="modal-title">Delete Project?</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="deleteModalTitle">Delete Project?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
             <div class="modal-body">
-                Are you sure you want to delete <b id="deleteProjectName"></b>?
+                Are you sure you want to delete <strong id="deleteProjectName"></strong>?
             </div>
-
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-danger">Delete</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
             </div>
-
         </form>
     </div>
 </div>
 
-
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-
 <script>
-/* Bootstrap modal instances */
 const editModal = new bootstrap.Modal(document.getElementById("editModal"));
 const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
 
-/* SEARCH FUNCTION */
 document.getElementById("searchBox").addEventListener("keyup", function () {
-    let filter = this.value.toLowerCase();
-    let rows = document.querySelectorAll("#projectTable tbody tr");
-
-    rows.forEach(r => {
-        let text = r.innerText.toLowerCase();
-        r.style.display = text.includes(filter) ? "" : "none";
+    var filter = this.value.toLowerCase();
+    var rows = document.querySelectorAll("#projectTable tbody tr");
+    rows.forEach(function(r) {
+        var text = r.innerText.toLowerCase();
+        r.style.display = text.indexOf(filter) !== -1 ? "" : "none";
     });
 });
 
-/* PAGINATION */
-const rowsPerPage = 8;
-const table = document.getElementById("projectTable");
-const rows = table.querySelectorAll("tbody tr");
-const pagination = document.getElementById("pagination");
-const totalPages = Math.ceil(rows.length / rowsPerPage);
+var rowsPerPage = 8;
+var table = document.getElementById("projectTable");
+var rows = table.querySelectorAll("tbody tr");
+var pagination = document.getElementById("pagination");
+var totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
 
 function showPage(page) {
-    rows.forEach((row, i) => {
-        row.style.display = (i >= (page - 1) * rowsPerPage && i < page * rowsPerPage)
-            ? ""
-            : "none";
+    rows.forEach(function(row, i) {
+        row.style.display = (i >= (page - 1) * rowsPerPage && i < page * rowsPerPage) ? "" : "none";
     });
 }
 
-for (let i = 1; i <= totalPages; i++) {
-    let li = document.createElement("li");
+for (var i = 1; i <= totalPages; i++) {
+    var li = document.createElement("li");
     li.className = "page-item";
-    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-    li.onclick = () => showPage(i);
+    var a = document.createElement("a");
+    a.className = "page-link";
+    a.href = "#";
+    a.textContent = i;
+    a.addEventListener("click", function(e) { e.preventDefault(); showPage(parseInt(this.textContent, 10)); });
+    li.appendChild(a);
     pagination.appendChild(li);
 }
-
 showPage(1);
 
-/* LOAD EDIT MODAL */
-document.querySelectorAll(".project-row").forEach(row => {
-    row.addEventListener("click", () => {
-
-        let id = row.dataset.id;
-
-        edit_project_name.value = row.dataset.name;
-        edit_contractor_name.value = row.dataset.contractor;
-        edit_project_site.value = row.dataset.site;
-        edit_ntp_date.value = row.dataset.ntp;
-        edit_completion_date.value = row.dataset.complete;
-        edit_duration.value = row.dataset.duration;
-        edit_price.value = row.dataset.price;
-        edit_status.value = row.dataset.status;
-
-        // FIX: Use hyphen URLs
-        editForm.action = `/construction/update-project/${id}`;
-        deleteForm.action = `/construction/delete-project/${id}`;
-
-        deleteProjectName.innerText = row.dataset.name;
-
+document.querySelectorAll(".project-row").forEach(function(row) {
+    row.addEventListener("click", function() {
+        var id = row.dataset.id;
+        document.getElementById("edit_project_name").value = row.dataset.name || "";
+        document.getElementById("edit_contractor_name").value = row.dataset.contractor || "";
+        document.getElementById("edit_project_site").value = row.dataset.site || "";
+        document.getElementById("edit_ntp_date").value = row.dataset.ntp || "";
+        document.getElementById("edit_completion_date").value = row.dataset.complete || "";
+        document.getElementById("edit_duration").value = row.dataset.duration || "";
+        document.getElementById("edit_price").value = row.dataset.price || "";
+        document.getElementById("edit_status").value = row.dataset.status || "";
+        document.getElementById("editForm").action = "/construction/update-project/" + id;
+        document.getElementById("deleteForm").action = "/construction/delete-project/" + id;
+        document.getElementById("deleteProjectName").textContent = row.dataset.name || "";
         editModal.show();
     });
 });
 
-
-/* DELETE BUTTON */
-deleteBtn.addEventListener("click", () => {
+document.getElementById("deleteBtn").addEventListener("click", function() {
     editModal.hide();
     deleteModal.show();
 });
 </script>
-
-
 </body>
 </html>
