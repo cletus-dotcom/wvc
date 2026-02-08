@@ -26,8 +26,12 @@
         </div>
         <div class="card-body p-0">
             {% if collectibles %}
+            <div class="p-3 border-bottom bg-light">
+                <label for="collectiblesSearch" class="form-label small fw-bold mb-1">Search bookings</label>
+                <input type="text" id="collectiblesSearch" class="form-control form-control-sm" placeholder="Filter by ID, customer, address, date, status…" autocomplete="off">
+            </div>
             <div class="table-responsive table-responsive-mobile">
-                <table class="table table-bordered table-sm align-middle mb-0">
+                <table class="table table-bordered table-sm align-middle mb-0" id="collectiblesTable">
                     <thead class="table-light">
                         <tr>
                             <th style="width:40px;"></th>
@@ -42,7 +46,7 @@
                     </thead>
                     <tbody>
                         {% for item in collectibles %}
-                        <tr class="collectible-row align-middle" data-booking-id="{{ item.booking.id }}" role="button" tabindex="0">
+                        <tr class="collectible-row align-middle" data-booking-id="{{ item.booking.id }}" data-search-text="{{ [item.booking.id|string, item.booking.requestor_name or '', item.booking.customer_address or '', item.booking.contact_number or '', item.booking.event_date.strftime('%b %d %Y') if item.booking.event_date else '', item.booking.event_time.strftime('%I:%M %p') if item.booking.event_time else '', item.booking.status or '', 'unpaid' if item.unpaid_only else '']|join(' ')|lower|e }}" role="button" tabindex="0">
                             <td class="expand-cell">
                                 {% if item.payments %}
                                 <i class="bi bi-chevron-right expand-icon" aria-hidden="true"></i>
@@ -126,6 +130,7 @@
 </style>
 <script>
 (function() {
+    // Expand/collapse
     document.querySelectorAll('.collectible-row').forEach(function(row) {
         row.addEventListener('click', function() {
             var id = this.getAttribute('data-booking-id');
@@ -142,6 +147,25 @@
             }
         });
     });
+
+    // Search filter (interactive)
+    var searchInput = document.getElementById('collectiblesSearch');
+    var collectibleRows = document.querySelectorAll('#collectiblesTable tbody tr.collectible-row');
+    if (searchInput && collectibleRows.length) {
+        searchInput.addEventListener('input', filterCollectibles);
+        searchInput.addEventListener('keyup', filterCollectibles);
+    }
+    function filterCollectibles() {
+        var q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
+        collectibleRows.forEach(function(row) {
+            var text = (row.getAttribute('data-search-text') || '').toLowerCase();
+            var show = !q || text.indexOf(q) !== -1;
+            row.style.display = show ? '' : 'none';
+            var id = row.getAttribute('data-booking-id');
+            var detail = id ? document.getElementById('payment-history-' + id) : null;
+            if (detail) detail.style.display = show ? (detail.style.display === 'table-row' ? 'table-row' : 'none') : 'none';
+        });
+    }
 })();
 </script>
 </body>

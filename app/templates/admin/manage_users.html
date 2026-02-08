@@ -71,8 +71,13 @@
         <button type="button" class="btn btn-primary btn-block-mobile" data-bs-toggle="modal" data-bs-target="#addUserModal">Add User</button>
     </div>
 
+    <div class="p-3 border rounded bg-light mb-3">
+        <label for="usersSearch" class="form-label small fw-bold mb-1">Search users</label>
+        <input type="text" id="usersSearch" class="form-control form-control-sm" placeholder="Filter by ID, username, role, department…" autocomplete="off">
+    </div>
+
     <div class="table-responsive-mobile">
-    <table class="table table-bordered bg-white shadow mb-0">
+    <table class="table table-bordered bg-white shadow mb-0" id="usersTable">
         <thead class="table-dark">
             <tr>
                 <th>ID</th>
@@ -85,7 +90,7 @@
 
         <tbody>
         {% for user in users %}
-            <tr>
+            <tr class="user-data-row" data-search-text="{{ [user.id|string, user.username or '', user.role or '', user.department or '']|join(' ')|lower|e }}">
                 <td>{{ user.id }}</td>
                 <td>{{ user.username }}</td>
                 <td>{{ user.role }}</td>
@@ -218,5 +223,22 @@
 
 
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+(function() {
+    var searchInput = document.getElementById('usersSearch');
+    var rows = document.querySelectorAll('#usersTable tbody tr.user-data-row');
+    if (searchInput && rows.length) {
+        searchInput.addEventListener('input', filterUsers);
+        searchInput.addEventListener('keyup', filterUsers);
+    }
+    function filterUsers() {
+        var q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
+        rows.forEach(function(row) {
+            var text = (row.getAttribute('data-search-text') || '').toLowerCase();
+            row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+        });
+    }
+})();
+</script>
 </body>
 </html>
