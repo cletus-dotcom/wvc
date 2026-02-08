@@ -137,6 +137,17 @@
         padding: 1rem 1.25rem;
         border: none;
     }
+
+    /* Add Purchases modal table: wider columns on mobile */
+    @media (max-width: 575.98px) {
+        .purchases-modal-table.purchases-modal-table { min-width: 480px; }
+        .purchases-modal-table .purchases-col-desc { min-width: 140px; }
+        .purchases-modal-table .purchases-col-qty { min-width: 72px; }
+        .purchases-modal-table .purchases-col-unit { min-width: 80px; }
+        .purchases-modal-table .purchases-col-unitprice { min-width: 95px; }
+        .purchases-modal-table .purchases-col-amount { min-width: 85px; }
+        .purchases-modal-table .purchases-col-action { min-width: 45px; }
+    }
 </style>
 
 <body>
@@ -439,13 +450,10 @@
                         <div class="mb-3" id="wagesEmployeeSection" style="display: none;">
                             <label class="form-label fw-bold">Employee</label>
                             <div class="row">
-                                <div class="col-md-8">
+                                <div class="col-12">
                                     <select class="form-select" id="expenseEmployeeId">
                                         <option value="">Select Employee</option>
                                     </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <button type="button" class="btn btn-warning btn-sm w-100" id="addEmployeeBtn">Add Employee</button>
                                 </div>
                             </div>
                             <input type="hidden" name="employee_name" id="expenseEmployeeName">
@@ -472,6 +480,10 @@
                             <div class="mb-2">
                                 <label class="form-label fw-bold">Amount</label>
                                 <input type="number" step="0.01" min="0" class="form-control" id="expenseEmployeeAmount" readonly>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <button type="button" class="btn btn-warning btn-sm" id="addEmployeeBtn">Add Employee</button>
                             </div>
                             
                             <div class="mb-3">
@@ -604,26 +616,26 @@
                             <input type="text" class="form-control fw-bold" id="purchasesTotal" readonly value="0.00">
                         </div>
                     </div>
-                    <div class="table-responsive" style="max-height: 280px;">
-                        <table class="table table-sm table-bordered">
+                    <div class="table-responsive table-responsive-mobile" style="max-height: 280px;">
+                        <table class="table table-sm table-bordered purchases-modal-table">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Description</th>
-                                    <th style="width:80px;">Qty</th>
-                                    <th style="width:80px;">Unit</th>
-                                    <th style="width:100px;">Unit Price</th>
-                                    <th style="width:100px;">Amount</th>
-                                    <th style="width:50px;"></th>
+                                    <th class="purchases-col-desc">Description</th>
+                                    <th class="purchases-col-qty">Qty</th>
+                                    <th class="purchases-col-unit">Unit</th>
+                                    <th class="purchases-col-unitprice">Unit Price</th>
+                                    <th class="purchases-col-amount">Amount</th>
+                                    <th class="purchases-col-action"></th>
                                 </tr>
                             </thead>
                             <tbody id="purchasesModalTableBody">
                                 <tr class="purchase-modal-row">
-                                    <td><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
-                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
-                                    <td><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
-                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
-                                    <td><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
-                                    <td><button type="button" class="btn btn-sm btn-outline-danger p-remove" style="display:none;">×</button></td>
+                                    <td class="purchases-col-desc"><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
+                                    <td class="purchases-col-qty"><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
+                                    <td class="purchases-col-unit"><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
+                                    <td class="purchases-col-unitprice"><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
+                                    <td class="purchases-col-amount"><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
+                                    <td class="purchases-col-action"><button type="button" class="btn btn-sm btn-outline-danger p-remove" style="display:none;">×</button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1069,12 +1081,12 @@
             const tbody = document.getElementById('purchasesModalTableBody');
             tbody.innerHTML = `
                 <tr class="purchase-modal-row">
-                    <td><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
-                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
-                    <td><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
-                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
-                    <td><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
-                    <td><button type="button" class="btn btn-sm btn-outline-danger p-remove" style="display:none;">×</button></td>
+                    <td class="purchases-col-desc"><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
+                    <td class="purchases-col-qty"><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
+                    <td class="purchases-col-unit"><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
+                    <td class="purchases-col-unitprice"><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
+                    <td class="purchases-col-amount"><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
+                    <td class="purchases-col-action"><button type="button" class="btn btn-sm btn-outline-danger p-remove" style="display:none;">×</button></td>
                 </tr>
             `;
             attachPurchaseModalRowListeners();
@@ -1134,12 +1146,12 @@
             const tr = document.createElement('tr');
             tr.className = 'purchase-modal-row';
             tr.innerHTML = `
-                <td><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
-                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
-                <td><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
-                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
-                <td><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
-                <td><button type="button" class="btn btn-sm btn-outline-danger p-remove">×</button></td>
+                <td class="purchases-col-desc"><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
+                <td class="purchases-col-qty"><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
+                <td class="purchases-col-unit"><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
+                <td class="purchases-col-unitprice"><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
+                <td class="purchases-col-amount"><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
+                <td class="purchases-col-action"><button type="button" class="btn btn-sm btn-outline-danger p-remove">×</button></td>
             `;
             tbody.appendChild(tr);
             attachPurchaseModalRowListeners();
