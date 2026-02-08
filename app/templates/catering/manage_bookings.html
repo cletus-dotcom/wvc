@@ -23,6 +23,10 @@
     <!-- Bookings Table -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
+            <div class="p-3 border-bottom bg-light">
+                <label for="bookingSearch" class="form-label small fw-bold mb-1">Search bookings</label>
+                <input type="text" id="bookingSearch" class="form-control form-control-sm" placeholder="Filter by ID, customer, address, date, time, items, status…" autocomplete="off">
+            </div>
             <div class="table-responsive table-responsive-mobile">
                 <table class="table table-bordered table-sm align-middle" id="bookingsTable">
                     <thead class="table-light">
@@ -38,7 +42,7 @@
                     </thead>
                     <tbody>
                     {% for booking in bookings %}
-                        <tr id="bookingRow{{ booking.id }}">
+                        <tr class="booking-data-row" id="bookingRow{{ booking.id }}" data-search-text="{{ [booking.id|string, booking.requestor_name or '', booking.customer_address or '', booking.contact_number or '', booking.event_date.strftime('%b %d %Y') if booking.event_date else '', booking.event_time.strftime('%I:%M %p') if booking.event_time else '', (booking.items_requested or '')|replace('\n', ' '), booking.status or '']|join(' ')|lower|e }}">
                             <td>{{ booking.id }}</td>
                             <td>
                                 <div class="fw-bold">{{ booking.requestor_name }}</div>
@@ -305,6 +309,29 @@
     // ===================== Bookings Table & Modals =====================
     const staffCateringNoDelete = {{ 'true' if (session.get('role') == 'Staff' and session.get('department') == 'Catering') else 'false' }};
     const bookingsTable = document.querySelector('#bookingsTable tbody');
+
+    // ---------- Search filter (interactive) ----------
+    (function() {
+        const searchInput = document.getElementById('bookingSearch');
+        const rows = document.querySelectorAll('#bookingsTable tbody tr.booking-data-row');
+        const totalCount = rows.length;
+
+        function filterTable() {
+            const q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
+            let visible = 0;
+            rows.forEach(function(row) {
+                const text = (row.getAttribute('data-search-text') || row.textContent || '').toLowerCase();
+                const show = !q || text.indexOf(q) !== -1;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterTable);
+            searchInput.addEventListener('keyup', filterTable);
+        }
+    })();
 
     const addForm = document.getElementById('addBookingForm');
     const editForm = document.getElementById('editBookingForm');
