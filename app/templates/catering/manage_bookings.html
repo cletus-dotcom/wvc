@@ -74,11 +74,15 @@
                                         data-status="{{ booking.status }}">
                                     Edit
                                 </button>
+                                {% if session.get('role') == 'Staff' and session.get('department') == 'Catering' %}
+                                <button type="button" class="btn btn-danger btn-sm" disabled title="Delete is not available for your role">Delete</button>
+                                {% else %}
                                 <a href="{{ url_for('catering.delete_booking', booking_id=booking.id) }}"
                                    class="btn btn-danger btn-sm delete-btn"
                                    onclick="return confirm('Are you sure you want to delete this booking?');">
                                     Delete
                                 </a>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
@@ -299,6 +303,7 @@
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 <script>
     // ===================== Bookings Table & Modals =====================
+    const staffCateringNoDelete = {{ 'true' if (session.get('role') == 'Staff' and session.get('department') == 'Catering') else 'false' }};
     const bookingsTable = document.querySelector('#bookingsTable tbody');
 
     const addForm = document.getElementById('addBookingForm');
@@ -633,7 +638,7 @@
                         data-status="${booking.status || 'Pending'}">
                     Edit
                 </button>
-                <a href="/catering/delete-booking/${booking.id}" class="btn btn-danger btn-sm delete-btn" onclick="return confirm('Are you sure?');">Delete</a>
+                ${staffCateringNoDelete ? '<button type="button" class="btn btn-danger btn-sm" disabled title="Delete is not available for your role">Delete</button>' : `<a href="/catering/delete-booking/${booking.id}" class="btn btn-danger btn-sm delete-btn" onclick="return confirm('Are you sure?');">Delete</a>`}
             </td>
         `;
     }

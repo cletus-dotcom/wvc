@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, session, flash, send_file, current_app
 from ...extensions import db
-from .models import CateringRequest, CateringMenu, CateringEquipment, CateringTransaction, CateringExpense, CateringWage
+from .models import CateringRequest, CateringMenu, CateringEquipment, CateringTransaction, CateringExpense, CateringWage, CateringPurchaseItem
 from app.decorators.auth_decorators import login_required, role_required, department_required
 from app.models.core import Employee, Department
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func, extract
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from collections import defaultdict
 
@@ -505,14 +505,18 @@ def booking_transaction_total(booking_id):
     return jsonify({"success": True, "total": float(total or 0)})
 
 
+def _manage_bookings_allowed():
+    """Check if current user can access Manage Bookings (Admin, Corporate, or Staff in Catering)."""
+    role = (session.get("role") or "").lower()
+    dept = (session.get("department") or "").lower()
+    return role == "admin" or dept == "corporate" or (role == "staff" and dept == "catering")
+
+
 @catering_bp.route("/manage-bookings")
 @login_required
 def manage_bookings():
-    """Manage catering bookings. Accessible to Admin role or Corporate department."""
-    user_role = (session.get("role") or "").lower()
-    user_dept = (session.get("department") or "").lower()
-    
-    if user_role != "admin" and user_dept != "corporate":
+    """Manage catering bookings. Accessible to Admin, Corporate, or Staff in Catering."""
+    if not _manage_bookings_allowed():
         flash("You do not have permission to access this page.", "danger")
         return redirect(url_for("catering.catering_home"))
     
@@ -531,10 +535,11 @@ def manage_bookings():
 @catering_bp.route("/view-collectibles")
 @login_required
 def view_collectibles():
-    """View all bookings that have a balance (not fully paid). Accessible to Admin or Corporate."""
+    """View all bookings that have a balance (not fully paid). Accessible to Admin, Corporate, or Staff in Catering."""
     user_role = (session.get("role") or "").lower()
     user_dept = (session.get("department") or "").lower()
-    if user_role != "admin" and user_dept != "corporate":
+    allowed = user_role == "admin" or user_dept == "corporate" or (user_role == "staff" and user_dept == "catering")
+    if not allowed:
         flash("You do not have permission to access this page.", "danger")
         return redirect(url_for("catering.catering_home"))
 
@@ -620,14 +625,81 @@ def view_collectibles():
     return render_template("catering/view_collectibles.html", collectibles=collectibles)
 
 
+def _edit_transactions_allowed():
+    """Check if current user can access Edit Transaction (Admin or Corporate only)."""
+    role = (session.get("role") or "").lower()
+    dept = (session.get("department") or "").lower()
+    return role == "admin" or dept == "corporate"
+
+
+@catering_bp.route("/edit-transactions")
+@login_required
+def edit_transactions():
+    """List bookings with expandable rows for their transactions. Admin or Corporate only."""
+    if not _edit_transactions_allowed():
+        flash("You do not have permission to access this page.", "danger")
+        return redirect(url_for("catering.catering_home"))
+    all_bookings = CateringRequest.query.order_by(
+        CateringRequest.event_date.desc(), CateringRequest.event_time.desc()
+    ).all()
+    # Build list of (booking, expenses) for each booking
+    booking_transactions = []
+    for b in all_bookings:
+        expenses = CateringExpense.query.filter_by(booking_id=b.id).order_by(
+            CateringExpense.date.desc(), CateringExpense.id.desc()
+        ).all()
+        booking_transactions.append({"booking": b, "expenses": expenses})
+    return render_template("catering/edit_transactions.html", booking_transactions=booking_transactions)
+
+
+@catering_bp.route("/edit-expense/<int:expense_id>", methods=["POST"])
+@login_required
+def edit_expense(expense_id):
+    """Update a single catering expense. Admin or Corporate only. Expects JSON or form: date, expense_type, amount, description, remarks."""
+    if not _edit_transactions_allowed():
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    expense = CateringExpense.query.get_or_404(expense_id)
+    data = request.get_json(silent=True) or request.form
+    date_str = (data.get("date") or "").strip()
+    expense_type = (data.get("expense_type") or "").strip()
+    amount_str = (data.get("amount") or "").strip()
+    description = (data.get("description") or "").strip() or None
+    remarks = (data.get("remarks") or "").strip() or None
+
+    if not date_str or not expense_type or not amount_str:
+        return jsonify({"success": False, "error": "Date, expense type, and amount are required."})
+
+    try:
+        expense.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        expense.expense_type = expense_type
+        expense.amount = Decimal(amount_str)
+        expense.description = description
+        expense.remarks = remarks
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "expense": {
+                "id": expense.id,
+                "date": expense.date.isoformat(),
+                "expense_type": expense.expense_type,
+                "amount": str(expense.amount),
+                "description": expense.description,
+                "remarks": expense.remarks,
+            },
+        })
+    except (ValueError, InvalidOperation) as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": "Invalid date or amount format."}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @catering_bp.route("/add-booking", methods=["POST"])
 @login_required
 def add_booking():
-    """Add a new catering booking. Accessible to Admin role or Corporate department."""
-    user_role = (session.get("role") or "").lower()
-    user_dept = (session.get("department") or "").lower()
-    
-    if user_role != "admin" and user_dept != "corporate":
+    """Add a new catering booking. Accessible to Admin, Corporate, or Staff in Catering."""
+    if not _manage_bookings_allowed():
         return jsonify({"success": False, "error": "Unauthorized"}), 403
     
     requestor_name = request.form.get("requestor_name", "").strip()
@@ -685,11 +757,8 @@ def add_booking():
 @catering_bp.route("/edit-booking/<int:booking_id>", methods=["POST"])
 @login_required
 def edit_booking(booking_id):
-    """Edit an existing catering booking. Accessible to Admin role or Corporate department."""
-    user_role = (session.get("role") or "").lower()
-    user_dept = (session.get("department") or "").lower()
-    
-    if user_role != "admin" and user_dept != "corporate":
+    """Edit an existing catering booking. Accessible to Admin, Corporate, or Staff in Catering."""
+    if not _manage_bookings_allowed():
         return jsonify({"success": False, "error": "Unauthorized"}), 403
     
     booking = CateringRequest.query.get_or_404(booking_id)
@@ -752,11 +821,8 @@ def edit_booking(booking_id):
 @catering_bp.route("/delete-booking/<int:booking_id>")
 @login_required
 def delete_booking(booking_id):
-    """Delete a catering booking. Accessible to Admin role or Corporate department."""
-    user_role = (session.get("role") or "").lower()
-    user_dept = (session.get("department") or "").lower()
-    
-    if user_role != "admin" and user_dept != "corporate":
+    """Delete a catering booking. Accessible to Admin, Corporate, or Staff in Catering."""
+    if not _manage_bookings_allowed():
         flash("You do not have permission to perform this action.", "danger")
         return redirect(url_for("catering.catering_home"))
     
@@ -773,11 +839,38 @@ def delete_booking(booking_id):
     return redirect(url_for("catering.manage_bookings"))
 
 
+def _next_catering_purchase_reference_for_date(parsed_date, same_date_count=0):
+    """Return next PUR-(date)-### for catering Purchases on the given date."""
+    existing = CateringExpense.query.filter(
+        CateringExpense.date == parsed_date,
+        CateringExpense.expense_type == "Purchases"
+    ).count()
+    seq = existing + same_date_count + 1
+    return f"PUR-{parsed_date.strftime('%Y-%m-%d')}-{seq:03d}"
+
+
+@catering_bp.route("/next-purchase-reference")
+@login_required
+@department_required("Catering", "Corporate")
+def next_purchase_reference():
+    """Return the next Purchase reference number for a date. Query: date=YYYY-MM-DD (default: today)."""
+    date_str = request.args.get("date", "")
+    if not date_str:
+        parsed_date = date.today()
+    else:
+        try:
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_date = date.today()
+    ref = _next_catering_purchase_reference_for_date(parsed_date, same_date_count=0)
+    return jsonify({"success": True, "referenceNumber": ref})
+
+
 @catering_bp.route("/add-expense", methods=["POST"])
 @login_required
 @department_required("Catering", "Corporate")
 def add_expense():
-    """Add an expense (Wages, Expenses, or Miscellaneous) for catering."""
+    """Add an expense (Wages, Expenses, or Miscellaneous) for catering. Optional booking_id to link to a booking."""
     date_str = request.form.get("date", "").strip()
     expense_type = request.form.get("expense_type", "").strip()
     amount = request.form.get("amount", "").strip()
@@ -785,6 +878,7 @@ def add_expense():
     employee_id = request.form.get("employee_id", "").strip()
     employee_name = request.form.get("employee_name", "").strip()
     remarks = request.form.get("remarks", "").strip()
+    booking_id = request.form.get("booking_id", "").strip()
 
     if not date_str or not expense_type or not amount:
         return jsonify({"success": False, "error": "Date, expense type, and amount are required."})
@@ -802,7 +896,8 @@ def add_expense():
         description=description if description else None,
         employee_id=int(employee_id) if employee_id else None,
         employee_name=employee_name if employee_name else None,
-        remarks=remarks if remarks else None
+        remarks=remarks if remarks else None,
+        booking_id=int(booking_id) if booking_id else None
     )
 
     try:
@@ -820,6 +915,78 @@ def add_expense():
                 "employee_name": new_expense.employee_name,
                 "remarks": new_expense.remarks
             }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@catering_bp.route("/add-purchases", methods=["POST"])
+@login_required
+@department_required("Catering", "Corporate")
+def add_purchases():
+    """Add a Purchases expense with line items. Expects JSON: date, reference_number, items[], booking_id (optional)."""
+    data = request.get_json() or {}
+    date_str = (data.get("date") or "").strip()
+    reference_number = (data.get("reference_number") or "").strip()
+    items = data.get("items") or []
+    booking_id = data.get("booking_id")
+
+    if not date_str or not items:
+        return jsonify({"success": False, "error": "Date and at least one item are required."})
+
+    try:
+        expense_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid date format."})
+
+    if not reference_number:
+        reference_number = _next_catering_purchase_reference_for_date(expense_date)
+
+    total = Decimal("0")
+    valid_items = []
+    for it in items:
+        desc = (it.get("description") or "").strip()
+        qty = Decimal(str(it.get("qty") or 0))
+        unit = (it.get("unit") or "").strip() or ""
+        unit_price = Decimal(str(it.get("unit_price") or 0))
+        amount = Decimal(str(it.get("amount") or 0))
+        if not desc or qty <= 0 or unit_price <= 0:
+            continue
+        if amount <= 0:
+            amount = qty * unit_price
+        total += amount
+        valid_items.append({"description": desc, "qty": qty, "unit": unit, "unit_price": unit_price, "amount": amount})
+
+    if not valid_items:
+        return jsonify({"success": False, "error": "No valid items provided."})
+
+    try:
+        expense = CateringExpense(
+            date=expense_date,
+            expense_type="Purchases",
+            amount=total,
+            description=f"Purchases {reference_number}",
+            reference_number=reference_number,
+            booking_id=int(booking_id) if booking_id else None,
+            remarks=f"Booking #{booking_id}" if booking_id else None
+        )
+        db.session.add(expense)
+        db.session.flush()
+        for it in valid_items:
+            db.session.add(CateringPurchaseItem(
+                expense_id=expense.id,
+                description=it["description"],
+                qty=it["qty"],
+                unit=it["unit"],
+                unit_price=it["unit_price"],
+                amount=it["amount"]
+            ))
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": "Purchases saved.",
+            "expense": {"id": expense.id, "reference_number": reference_number, "amount": str(total)}
         })
     except Exception as e:
         db.session.rollback()
@@ -857,6 +1024,7 @@ def add_wages():
     wages = data.get("wages", [])
     date_str = data.get("date", "").strip()
     description = data.get("description", "Wages").strip()
+    booking_id = data.get("booking_id")
 
     if not date_str or not wages:
         return jsonify({"success": False, "error": "Date and at least one wage entry are required."})
@@ -893,21 +1061,27 @@ def add_wages():
         if not wage_entries:
             return jsonify({"success": False, "error": "No valid wage entries provided."})
 
-        # Calculate total wages amount
+        # Calculate total wages amount and create CateringExpense first (so we can link wage entries)
         total_wages_amount = sum(entry.amount for entry in wage_entries)
-        
-        # Also save to catering_expense table as a single Wages expense entry
+        remarks = f"Wages for {len(wage_entries)} employee(s)"
+        if booking_id:
+            remarks = f"Booking #{booking_id} — " + remarks
         wages_expense = CateringExpense(
             date=expense_date,
             expense_type="Wages",
             amount=total_wages_amount,
             description=description,
-            employee_id=None,  # Not specific to one employee
+            employee_id=None,
             employee_name=None,
-            remarks=f"Wages for {len(wage_entries)} employee(s)"
+            remarks=remarks,
+            booking_id=int(booking_id) if booking_id else None
         )
         db.session.add(wages_expense)
-        
+        db.session.flush()  # Get wages_expense.id
+
+        for entry in wage_entries:
+            entry.expense_id = wages_expense.id
+
         db.session.commit()
 
         return jsonify({
@@ -1118,12 +1292,43 @@ def view_balance_sheet():
         "net": total_income - (total_wages + total_expenses_other),
     }
 
+    # Bookings with Confirmed or Completed status: per-booking financial statements
+    bookings_for_sheet = CateringRequest.query.filter(
+        CateringRequest.status.in_(["Confirmed", "Completed"])
+    ).order_by(CateringRequest.event_date.desc(), CateringRequest.event_time.desc()).all()
+
+    booking_financials = []
+    for b in bookings_for_sheet:
+        income_items = CateringTransaction.query.filter(
+            CateringTransaction.booking_id == b.id
+        ).order_by(CateringTransaction.date.asc(), CateringTransaction.id.asc()).all()
+        expense_items = CateringExpense.query.filter(
+            CateringExpense.booking_id == b.id
+        ).order_by(CateringExpense.date.asc(), CateringExpense.id.asc()).all()
+        income_total = sum((Decimal(str(t.trans_amount or 0)) for t in income_items), Decimal("0"))
+        expense_total = sum((Decimal(str(e.amount or 0)) for e in expense_items), Decimal("0"))
+        # Booking total amount (contract total): max booking_amount from transactions
+        total_amount = Decimal("0")
+        for t in income_items:
+            if t.booking_amount is not None:
+                total_amount = max(total_amount, Decimal(str(t.booking_amount)))
+        booking_financials.append({
+            "booking": b,
+            "income_items": income_items,
+            "expense_items": expense_items,
+            "income_total": income_total,
+            "expense_total": expense_total,
+            "net": income_total - expense_total,
+            "total_amount": total_amount,
+        })
+
     return render_template(
         "catering/view_balance_sheet.html",
         available_months=available_months,
         selected_month=selected_month,
         daily_rows=daily_rows,
         summary=summary,
+        booking_financials=booking_financials,
     )
 
 

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Edit Transactions - Catering</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .booking-row { cursor: pointer; }
+        .booking-row:hover { background-color: rgba(0,0,0,.04); }
+        .booking-row.expanded .expand-icon { transform: rotate(90deg); }
+        .expand-icon { transition: transform 0.2s ease; display: inline-block; }
+        .transactions-detail { display: none; }
+        .transactions-detail.show { display: table-row; }
+        .edit-expense-row { display: none; }
+        .edit-expense-row.show { display: table-row; }
+        .txn-table { margin: 0; background: #fff; }
+        .txn-expandable { cursor: pointer; }
+        .txn-expandable:hover { background-color: rgba(0,0,0,.04); }
+        .txn-expandable.expanded .txn-expand-icon { transform: rotate(90deg); }
+        .txn-expand-icon { transition: transform 0.2s ease; display: inline-block; }
+        .txn-detail-row { display: none; }
+        .txn-detail-row.show { display: table-row; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container container-mobile mt-4 py-3">
+    <div class="d-flex page-header-mobile flex-wrap justify-content-between align-items-start mb-3 gap-2">
+        <div>
+            <a href="{{ url_for('catering.catering_home') }}" class="btn btn-secondary btn-sm mb-1">&larr; Back</a>
+            <h3 class="mb-1">Edit Transactions</h3>
+            <p class="text-muted small mb-0">Bookings with transactions — expand a row to view and edit</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <i class="bi bi-pencil-square me-2"></i>Bookings &amp; transactions
+        </div>
+        <div class="card-body p-0">
+            {% if booking_transactions %}
+            <div class="table-responsive table-responsive-mobile">
+                <table class="table table-bordered table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40px;"></th>
+                            <th>Customer / Booking</th>
+                            <th>Event Date</th>
+                            <th>Event Time</th>
+                            <th>Status</th>
+                            <th class="text-center">Transactions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in booking_transactions %}
+                        <tr class="booking-row align-middle" data-booking-id="{{ item.booking.id }}" role="button" tabindex="0">
+                            <td><i class="bi bi-chevron-right expand-icon" aria-hidden="true"></i></td>
+                            <td>
+                                <div class="fw-bold">Booking #{{ item.booking.id }} — {{ item.booking.requestor_name }}</div>
+                                {% if item.booking.customer_address %}
+                                <div class="text-muted" style="font-size: 0.85rem;">{{ item.booking.customer_address }}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.booking.event_date.strftime('%b %d, %Y') if item.booking.event_date else '—' }}</td>
+                            <td>{{ item.booking.event_time.strftime('%I:%M %p') if item.booking.event_time else '—' }}</td>
+                            <td>
+                                <span class="badge {% if item.booking.status == 'Confirmed' %}bg-success{% elif item.booking.status == 'Pending' %}bg-warning text-dark{% elif item.booking.status == 'Cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">{{ item.booking.status or '—' }}</span>
+                            </td>
+                            <td class="text-center"><span class="badge bg-secondary">{{ item.expenses|length }}</span></td>
+                        </tr>
+                        <tr class="transactions-detail" id="detail-{{ item.booking.id }}">
+                            <td colspan="6" class="p-0 bg-light">
+                                <div class="p-3">
+                                    {% if item.expenses %}
+                                    <table class="table table-sm table-bordered txn-table align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Type</th>
+                                                <th>Description</th>
+                                                <th class="text-end">Amount</th>
+                                                <th>Remarks</th>
+                                                <th style="width:80px;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for exp in item.expenses %}
+                                            {% set has_detail = (exp.expense_type == 'Purchases' and exp.purchase_items) or (exp.expense_type == 'Wages' and exp.wage_entries) %}
+                                            <tr class="txn-data-row {% if has_detail %}txn-expandable{% endif %}" data-expense-id="{{ exp.id }}" data-expense-type="{{ exp.expense_type }}" {% if has_detail %}role="button" tabindex="0"{% endif %}>
+                                                <td>{{ exp.date.strftime('%b %d, %Y') if exp.date else '—' }}</td>
+                                                <td>
+                                                    {% if has_detail %}
+                                                    <i class="bi bi-chevron-right txn-expand-icon me-1" aria-hidden="true"></i>
+                                                    {% endif %}
+                                                    <span class="badge {% if exp.expense_type == 'Wages' %}bg-primary{% elif exp.expense_type == 'Expenses' %}bg-success{% elif exp.expense_type == 'Purchases' %}bg-info{% else %}bg-secondary{% endif %}">{{ exp.expense_type }}{% if exp.reference_number %} ({{ exp.reference_number }}){% endif %}</span>
+                                                </td>
+                                                <td>{{ exp.description or '—' }}</td>
+                                                <td class="text-end">₱{{ "{:,.2f}".format(exp.amount) }}</td>
+                                                <td class="text-muted small">{{ (exp.remarks or '—')[:30] }}{% if exp.remarks and exp.remarks|length > 30 %}…{% endif %}</td>
+                                                <td>
+                                                    <button type="button" class="btn btn-warning btn-sm edit-txn-btn" data-expense-id="{{ exp.id }}" title="Edit">Edit</button>
+                                                </td>
+                                            </tr>
+                                            {% if exp.expense_type == 'Purchases' and exp.purchase_items %}
+                                            <tr class="txn-detail-row" id="detail-purchase-{{ exp.id }}">
+                                                <td colspan="6" class="p-2 bg-white">
+                                                    <div class="small ms-3">
+                                                        <strong>Purchase items:</strong>
+                                                        <table class="table table-sm table-bordered mt-1 mb-0">
+                                                            <thead class="table-light"><tr><th>Description</th><th>Qty</th><th>Unit</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr></thead>
+                                                            <tbody>
+                                                                {% for pi in exp.purchase_items %}
+                                                                <tr><td>{{ pi.description }}</td><td>{{ pi.qty }}</td><td>{{ pi.unit or '—' }}</td><td class="text-end">₱{{ "{:,.2f}".format(pi.unit_price) }}</td><td class="text-end">₱{{ "{:,.2f}".format(pi.amount) }}</td></tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% elif exp.expense_type == 'Wages' and exp.wage_entries %}
+                                            <tr class="txn-detail-row" id="detail-wage-{{ exp.id }}">
+                                                <td colspan="6" class="p-2 bg-white">
+                                                    <div class="small ms-3">
+                                                        <strong>Wage entries:</strong>
+                                                        <table class="table table-sm table-bordered mt-1 mb-0">
+                                                            <thead class="table-light"><tr><th>Employee</th><th class="text-end">Rate/Day</th><th class="text-end">Days</th><th class="text-end">Amount</th></tr></thead>
+                                                            <tbody>
+                                                                {% for w in exp.wage_entries %}
+                                                                <tr><td>{{ w.employee_name }}</td><td class="text-end">₱{{ "{:,.2f}".format(w.rate_per_day) }}</td><td class="text-end">{{ w.number_of_days }}</td><td class="text-end">₱{{ "{:,.2f}".format(w.amount) }}</td></tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                            <tr class="edit-expense-row" id="edit-{{ exp.id }}">
+                                                <td colspan="6" class="bg-white pt-2 pb-2">
+                                                    <form class="edit-expense-form" data-expense-id="{{ exp.id }}" data-action-url="{{ url_for('catering.edit_expense', expense_id=exp.id) }}">
+                                                        <div class="row g-2 align-items-end">
+                                                            <div class="col-md-2">
+                                                                <label class="form-label small fw-bold">Date</label>
+                                                                <input type="date" name="date" class="form-control form-control-sm" value="{{ exp.date.isoformat() if exp.date else '' }}" required>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label small fw-bold">Type</label>
+                                                                <select name="expense_type" class="form-select form-select-sm" required>
+                                                                    <option value="Wages" {% if exp.expense_type == 'Wages' %}selected{% endif %}>Wages</option>
+                                                                    <option value="Expenses" {% if exp.expense_type == 'Expenses' %}selected{% endif %}>Expenses</option>
+                                                                    <option value="Miscellaneous" {% if exp.expense_type == 'Miscellaneous' %}selected{% endif %}>Miscellaneous</option>
+                                                                    <option value="Purchases" {% if exp.expense_type == 'Purchases' %}selected{% endif %}>Purchases</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label small fw-bold">Amount</label>
+                                                                <input type="number" step="0.01" min="0" name="amount" class="form-control form-control-sm" value="{{ exp.amount }}" required>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label small fw-bold">Description</label>
+                                                                <input type="text" name="description" class="form-control form-control-sm" value="{{ exp.description or '' }}" placeholder="Optional">
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label small fw-bold">Remarks</label>
+                                                                <input type="text" name="remarks" class="form-control form-control-sm" value="{{ exp.remarks or '' }}" placeholder="Optional">
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <button type="submit" class="btn btn-warning btn-sm me-1">Save</button>
+                                                                <button type="button" class="btn btn-outline-secondary btn-sm cancel-edit-btn" data-expense-id="{{ exp.id }}">Cancel</button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                    <div class="mt-1 small" id="msg-{{ exp.id }}"></div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    {% else %}
+                                    <p class="text-muted small mb-0">No transactions for this booking.</p>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-inbox display-6"></i>
+                <p class="mb-0 mt-2">No bookings found.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Expand/collapse booking row
+    document.querySelectorAll('.booking-row').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-txn-btn') || e.target.closest('.edit-expense-form') || e.target.closest('.cancel-edit-btn') || e.target.closest('.txn-expandable') || e.target.closest('.txn-detail-row')) return;
+            var id = this.getAttribute('data-booking-id');
+            var detail = document.getElementById('detail-' + id);
+            if (!detail) return;
+            var isHidden = !detail.classList.contains('show');
+            document.querySelectorAll('.transactions-detail').forEach(function(r) { r.classList.remove('show'); });
+            document.querySelectorAll('.booking-row').forEach(function(r) { r.classList.remove('expanded'); });
+            if (isHidden) {
+                detail.classList.add('show');
+                this.classList.add('expanded');
+            }
+        });
+        row.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+        });
+    });
+
+    // Expand/collapse Purchases/Wages detail rows
+    document.querySelectorAll('.txn-expandable').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-txn-btn')) return;
+            e.stopPropagation();
+            var expId = this.getAttribute('data-expense-id');
+            var expType = this.getAttribute('data-expense-type');
+            var detailId = 'detail-' + (expType === 'Purchases' ? 'purchase' : 'wage') + '-' + expId;
+            var detail = document.getElementById(detailId);
+            if (!detail) return;
+            var isHidden = !detail.classList.contains('show');
+            document.querySelectorAll('.txn-detail-row').forEach(function(r) { r.classList.remove('show'); });
+            document.querySelectorAll('.txn-expandable').forEach(function(r) { r.classList.remove('expanded'); });
+            if (isHidden) {
+                detail.classList.add('show');
+                this.classList.add('expanded');
+            }
+        });
+        row.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+        });
+    });
+
+    // Edit button: show edit form for this transaction
+    document.querySelectorAll('.edit-txn-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var id = this.getAttribute('data-expense-id');
+            var editRow = document.getElementById('edit-' + id);
+            if (!editRow) return;
+            document.querySelectorAll('.edit-expense-row').forEach(function(r) { r.classList.remove('show'); });
+            editRow.classList.add('show');
+        });
+    });
+
+    // Cancel edit: hide edit form
+    document.querySelectorAll('.cancel-edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var id = this.getAttribute('data-expense-id');
+            var editRow = document.getElementById('edit-' + id);
+            if (editRow) editRow.classList.remove('show');
+        });
+    });
+
+    // Submit edit form
+    document.querySelectorAll('.edit-expense-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var id = form.getAttribute('data-expense-id');
+            var msgEl = document.getElementById('msg-' + id);
+            msgEl.textContent = '';
+            msgEl.className = 'mt-1 small';
+            var body = {
+                date: form.querySelector('[name="date"]').value,
+                expense_type: form.querySelector('[name="expense_type"]').value,
+                amount: form.querySelector('[name="amount"]').value,
+                description: form.querySelector('[name="description"]').value || '',
+                remarks: form.querySelector('[name="remarks"]').value || ''
+            };
+            var actionUrl = form.getAttribute('data-action-url');
+            fetch(actionUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(body)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    msgEl.textContent = 'Saved.';
+                    msgEl.className = 'mt-1 small text-success';
+                    setTimeout(function() { location.reload(); }, 600);
+                } else {
+                    msgEl.textContent = data.error || 'Save failed.';
+                    msgEl.className = 'mt-1 small text-danger';
+                }
+            })
+            .catch(function() {
+                msgEl.textContent = 'Network error.';
+                msgEl.className = 'mt-1 small text-danger';
+            });
+        });
+    });
+})();
+</script>
+</body>
+</html>

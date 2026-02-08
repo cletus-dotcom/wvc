@@ -14,9 +14,12 @@
 <style>
     :root {
         --pastel-collectibles: #f3e5f5;
+        --pastel-edit: #e8eaf6;
         --pastel-wages: #fff8e1;
         --pastel-expenses: #e8f5e9;
         --pastel-misc: #e3f2fd;
+        --pastel-balance: #e0f2f1;
+        --pastel-manage: #fce4ec;
         --card-radius: 12px;
         --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
         --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
@@ -97,18 +100,27 @@
     }
 
     .expense-card[data-expense-type="Collectibles"] { background: var(--pastel-collectibles) !important; }
+    .expense-card[data-expense-type="EditTransaction"] { background: var(--pastel-edit) !important; }
     .expense-card[data-expense-type="Wages"] { background: var(--pastel-wages) !important; }
     .expense-card[data-expense-type="Expenses"] { background: var(--pastel-expenses) !important; }
     .expense-card[data-expense-type="Miscellaneous"] { background: var(--pastel-misc) !important; }
+    .expense-card[data-expense-type="BalanceSheet"] { background: var(--pastel-balance) !important; }
+    .expense-card[data-expense-type="ManageBookings"] { background: var(--pastel-manage) !important; }
 
     .expense-card .card-title i { font-size: 2rem !important; }
     .expense-card[data-expense-type="Collectibles"] .card-title i { color: #7c3aed !important; }
+    .expense-card[data-expense-type="EditTransaction"] .card-title i { color: #3949ab !important; }
     .expense-card[data-expense-type="Wages"] .card-title i { color: #f59e0b !important; }
     .expense-card[data-expense-type="Expenses"] .card-title i { color: #16a34a !important; }
     .expense-card[data-expense-type="Miscellaneous"] .card-title i { color: #2563eb !important; }
+    .expense-card[data-expense-type="BalanceSheet"] .card-title i { color: #0d9488 !important; }
+    .expense-card[data-expense-type="ManageBookings"] .card-title i { color: #c2185b !important; }
 
     .expense-card h4 { font-weight: 600; color: #1e293b; }
     .expense-card .text-muted { font-size: 0.9rem; color: #64748b !important; }
+
+    .booking-row.expanded .booking-expand-icon { transform: rotate(90deg); }
+    .booking-expand-icon { transition: transform 0.2s ease; display: inline-block; }
 
     .content-card {
         border: none;
@@ -187,13 +199,21 @@
                     {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle fw-bold
-                            {% if request.endpoint in ['catering.view_wages', 'catering.view_balance_sheet', 'catering.view_collectibles'] %}active{% endif %}"
+                            {% if request.endpoint in ['catering.view_wages', 'catering.view_balance_sheet', 'catering.view_collectibles', 'catering.edit_transactions'] %}active{% endif %}"
                         href="#" id="corporateDropdown" role="button"
                         data-bs-toggle="dropdown">
                             Corporate
                         </a>
 
                         <ul class="dropdown-menu" aria-labelledby="corporateDropdown">
+                            <!-- Edit Transaction -->
+                            <li>
+                                <a class="dropdown-item"
+                                href="{{ url_for('catering.edit_transactions') }}">
+                                    Edit Transaction
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             <!-- View Collectibles -->
                             <li>
                                 <a class="dropdown-item"
@@ -256,8 +276,21 @@
 
         <!-- Pastel status / action cards -->
         <div class="row g-3 mb-4">
-            {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
-            <div class="col-md-3 col-6">
+            {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' or (session.get('role') == 'Staff' and session.get('department') == 'Catering') %}
+            <div class="col-md-6 col-6">
+                <a href="{{ url_for('catering.manage_bookings') }}" class="text-decoration-none text-dark">
+                    <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="ManageBookings">
+                        <div class="card-body text-center py-4">
+                            <h5 class="card-title mb-3">
+                                <i class="bi bi-calendar-event"></i>
+                            </h5>
+                            <h4 class="mb-2">Manage Bookings</h4>
+                            <p class="text-muted mb-0 small">View, edit, and manage catering bookings</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 col-6">
                 <a href="{{ url_for('catering.view_collectibles') }}" class="text-decoration-none text-dark">
                     <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Collectibles">
                         <div class="card-body text-center py-4">
@@ -271,39 +304,34 @@
                 </a>
             </div>
             {% endif %}
-            <div class="col-md-{% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}3{% else %}4{% endif %} col-6">
-                <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Wages" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <div class="card-body text-center py-4">
-                        <h5 class="card-title mb-3">
-                            <i class="bi bi-cash-stack"></i>
-                        </h5>
-                        <h4 class="mb-2">Wages</h4>
-                        <p class="text-muted mb-0 small">Enter employee wages</p>
+            {% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}
+            <div class="col-md-6 col-6">
+                <a href="{{ url_for('catering.edit_transactions') }}" class="text-decoration-none text-dark">
+                    <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="EditTransaction">
+                        <div class="card-body text-center py-4">
+                            <h5 class="card-title mb-3">
+                                <i class="bi bi-pencil-square"></i>
+                            </h5>
+                            <h4 class="mb-2">Edit Transaction</h4>
+                            <p class="text-muted mb-0 small">List and edit wages, expenses, miscellaneous</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
-            <div class="col-md-{% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}3{% else %}4{% endif %} col-6">
-                <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Expenses" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <div class="card-body text-center py-4">
-                        <h5 class="card-title mb-3">
-                            <i class="bi bi-receipt"></i>
-                        </h5>
-                        <h4 class="mb-2">Expenses</h4>
-                        <p class="text-muted mb-0 small">Enter operational expenses</p>
+            <div class="col-md-6 col-6">
+                <a href="{{ url_for('catering.view_balance_sheet') }}" class="text-decoration-none text-dark">
+                    <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="BalanceSheet">
+                        <div class="card-body text-center py-4">
+                            <h5 class="card-title mb-3">
+                                <i class="bi bi-graph-up"></i>
+                            </h5>
+                            <h4 class="mb-2">View Balance Sheet</h4>
+                            <p class="text-muted mb-0 small">Summary and bookings with financial statements</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
-            <div class="col-md-{% if session.get('department') == 'Corporate' or session.get('role') == 'Admin' %}3{% else %}4{% endif %} col-6">
-                <div class="card h-100 expense-card" style="cursor: pointer;" data-expense-type="Miscellaneous" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <div class="card-body text-center py-4">
-                        <h5 class="card-title mb-3">
-                            <i class="bi bi-piggy-bank"></i>
-                        </h5>
-                        <h4 class="mb-2">Miscellaneous</h4>
-                        <p class="text-muted mb-0 small">Enter miscellaneous expenses</p>
-                    </div>
-                </div>
-            </div>
+            {% endif %}
         </div>
 
         <!-- Confirmed Bookings List -->
@@ -312,12 +340,20 @@
                 <i class="bi bi-calendar-check me-2"></i>Confirmed Bookings
             </div>
             <div class="card-body">
+                <p class="text-muted small mb-2">Click a row to expand and choose: Add Payment, Add Wages, Add Purchases, or Add Miscellaneous Expense (all referenced to that booking).</p>
                 {% if confirmed_bookings %}
+                <div class="mb-3">
+                    <label for="bookingSearch" class="form-label small fw-bold visually-hidden">Search bookings</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="bookingSearch" placeholder="Search by customer, date, items, contact..." autocomplete="off">
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-bordered table-sm align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:40px;">ID</th>
+                                <th style="width:40px;"></th>
                                 <th>Customer</th>
                                 <th>Event Date</th>
                                 <th>Event Time</th>
@@ -327,11 +363,11 @@
                         </thead>
                         <tbody>
                         {% for booking in confirmed_bookings %}
-                            <tr class="booking-row" style="cursor: pointer;" 
+                            <tr class="booking-row align-middle" style="cursor: pointer;" 
                                 data-booking-id="{{ booking.id }}"
                                 data-booking-name="{{ booking.requestor_name }}"
                                 data-booking-items="{{ booking.items_requested }}">
-                                <td>{{ booking.id }}</td>
+                                <td><i class="bi bi-chevron-right booking-expand-icon" aria-hidden="true"></i></td>
                                 <td>
                                     <div class="fw-bold">{{ booking.requestor_name }}</div>
                                     {% if booking.customer_address %}
@@ -348,6 +384,25 @@
                                     {% if booking.email_address %}
                                     <div class="text-muted" style="font-size: 0.85rem;">{{ booking.email_address }}</div>
                                     {% endif %}
+                                </td>
+                            </tr>
+                            <tr class="booking-actions-row" id="booking-actions-{{ booking.id }}" style="display: none;">
+                                <td colspan="6" class="bg-light py-2">
+                                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                                        <span class="text-muted small me-2">Booking #{{ booking.id }} —</span>
+                                        <button type="button" class="btn btn-warning btn-sm booking-action-payment" data-booking-id="{{ booking.id }}" data-booking-name="{{ booking.requestor_name }}" data-booking-items="{{ booking.items_requested }}">
+                                            <i class="bi bi-cash-coin me-1"></i>Add Payment
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm booking-action-wages" data-booking-id="{{ booking.id }}">
+                                            <i class="bi bi-cash-stack me-1"></i>Add Wages
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm booking-action-purchases" data-booking-id="{{ booking.id }}">
+                                            <i class="bi bi-cart-plus me-1"></i>Add Purchases
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm booking-action-misc" data-booking-id="{{ booking.id }}">
+                                            <i class="bi bi-piggy-bank me-1"></i>Add Miscellaneous
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -374,6 +429,7 @@
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="expense_type" id="expenseType">
+                        <input type="hidden" name="booking_id" id="expenseBookingId" value="">
                         
                         <div class="mb-3">
                             <label class="form-label fw-bold">Date</label>
@@ -403,7 +459,16 @@
                                 <label class="form-label fw-bold">Number of Days</label>
                                 <input type="number" step="0.01" min="0" class="form-control" id="expenseNumberOfDays">
                             </div>
-                            
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Overtime Hours</label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="expenseOvertimeHours" placeholder="0">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Overtime Amount</label>
+                                    <input type="text" class="form-control" id="expenseOvertimeAmount" readonly placeholder="0.00">
+                                </div>
+                            </div>
                             <div class="mb-2">
                                 <label class="form-label fw-bold">Amount</label>
                                 <input type="number" step="0.01" min="0" class="form-control" id="expenseEmployeeAmount" readonly>
@@ -516,6 +581,63 @@
         </div>
     </div>
 
+    <!-- Add Purchases Modal (per booking) -->
+    <div class="modal fade" id="purchasesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Purchases</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Date</label>
+                            <input type="date" class="form-control" id="purchasesDate" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Reference #</label>
+                            <input type="text" class="form-control" id="purchasesReference" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Total</label>
+                            <input type="text" class="form-control fw-bold" id="purchasesTotal" readonly value="0.00">
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 280px;">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Description</th>
+                                    <th style="width:80px;">Qty</th>
+                                    <th style="width:80px;">Unit</th>
+                                    <th style="width:100px;">Unit Price</th>
+                                    <th style="width:100px;">Amount</th>
+                                    <th style="width:50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchasesModalTableBody">
+                                <tr class="purchase-modal-row">
+                                    <td><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
+                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
+                                    <td><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
+                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
+                                    <td><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
+                                    <td><button type="button" class="btn btn-sm btn-outline-danger p-remove" style="display:none;">×</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="purchasesAddRow"><i class="bi bi-plus"></i> Add row</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning btn-sm" id="purchasesSaveBtn">Save Purchases</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {% block scripts %}
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
@@ -550,10 +672,13 @@
         // Store wages entries
         let wagesEntries = [];
 
-        // Handle expense card click
+        // Handle expense card click (or when opened from booking row, expenseType/bookingId set by caller)
         document.getElementById('expenseModal').addEventListener('show.bs.modal', function(event) {
             const card = event.relatedTarget;
-            const expenseType = card.dataset.expenseType;
+            if (card && card.dataset.expenseType) {
+                document.getElementById('expenseBookingId').value = '';
+            }
+            const expenseType = (card && card.dataset.expenseType) || document.getElementById('expenseType').value;
             document.getElementById('expenseType').value = expenseType;
             document.getElementById('expenseModalTitle').textContent = `Add ${expenseType}`;
             
@@ -573,6 +698,10 @@
                 document.getElementById('employeeWagesList').innerHTML = '';
                 document.getElementById('expenseAmount').value = '0.00';
                 document.getElementById('totalWagesAmount').value = '₱0.00';
+                document.getElementById('expenseNumberOfDays').value = '';
+                document.getElementById('expenseOvertimeHours').value = '';
+                document.getElementById('expenseOvertimeAmount').value = '';
+                document.getElementById('expenseEmployeeAmount').value = '';
             } else {
                 wagesSection.style.display = 'none';
                 regularAmountSection.style.display = 'block';
@@ -581,9 +710,8 @@
                 descriptionInput.readOnly = false;
             }
             
-            // Set today's date as default
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('expenseDate').value = today;
+            // Leave date blank; user must enter date
+            document.getElementById('expenseDate').value = '';
         });
 
         // Update employee rate and calculate amount when employee is selected
@@ -598,12 +726,19 @@
         // Calculate wage amount when number of days changes
         document.getElementById('expenseNumberOfDays').addEventListener('input', calculateWageAmount);
         document.getElementById('expenseNumberOfDays').addEventListener('change', calculateWageAmount);
+        document.getElementById('expenseOvertimeHours').addEventListener('input', calculateWageAmount);
+        document.getElementById('expenseOvertimeHours').addEventListener('change', calculateWageAmount);
 
         function calculateWageAmount() {
             const rate = parseFloat(document.getElementById('expenseEmployeeRate').value.replace(/,/g, '')) || 0;
             const days = parseFloat(document.getElementById('expenseNumberOfDays').value) || 0;
-            const amount = rate * days;
-            document.getElementById('expenseEmployeeAmount').value = amount.toFixed(2);
+            const overtimeHours = parseFloat(document.getElementById('expenseOvertimeHours').value) || 0;
+            const ratePerHour = rate / 8;
+            const overtimeAmount = ratePerHour * overtimeHours;
+            const daysAmount = rate * days;
+            const totalAmount = daysAmount + overtimeAmount;
+            document.getElementById('expenseOvertimeAmount').value = overtimeAmount.toFixed(2);
+            document.getElementById('expenseEmployeeAmount').value = totalAmount.toFixed(2);
         }
 
         // Add employee to wages list
@@ -620,10 +755,12 @@
             const employeeName = document.getElementById('expenseEmployeeName').value;
             const rate = parseFloat(document.getElementById('expenseEmployeeRate').value.replace(/,/g, '')) || 0;
             const days = parseFloat(document.getElementById('expenseNumberOfDays').value) || 0;
+            const overtimeHours = parseFloat(document.getElementById('expenseOvertimeHours').value) || 0;
+            const overtimeAmount = parseFloat(document.getElementById('expenseOvertimeAmount').value) || 0;
             const amount = parseFloat(document.getElementById('expenseEmployeeAmount').value) || 0;
             
-            if (days <= 0) {
-                alert('Please enter a valid number of days.');
+            if (days <= 0 && overtimeHours <= 0) {
+                alert('Please enter number of days and/or overtime hours.');
                 return;
             }
             
@@ -633,12 +770,14 @@
                 return;
             }
             
-            // Add to wages entries
+            // Add to wages entries (amount = days amount + overtime amount)
             wagesEntries.push({
                 employee_id: employeeId,
                 employee_name: employeeName,
                 rate_per_day: rate,
                 number_of_days: days,
+                overtime_hours: overtimeHours,
+                overtime_amount: overtimeAmount,
                 amount: amount
             });
             
@@ -646,7 +785,10 @@
             const listBox = document.getElementById('employeeWagesList');
             const option = document.createElement('option');
             option.value = employeeId;
-            option.textContent = `${employeeName} - ${days} day(s) x ₱${rate.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} = ₱${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            let desc = `${employeeName} - ${days} day(s)`;
+            if (overtimeHours > 0) desc += ` + ${overtimeHours} OT`;
+            desc += ` = ₱${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            option.textContent = desc;
             option.dataset.index = wagesEntries.length - 1;
             listBox.appendChild(option);
             
@@ -654,6 +796,8 @@
             employeeSelect.value = '';
             document.getElementById('expenseEmployeeRate').value = '';
             document.getElementById('expenseNumberOfDays').value = '';
+            document.getElementById('expenseOvertimeHours').value = '';
+            document.getElementById('expenseOvertimeAmount').value = '';
             document.getElementById('expenseEmployeeAmount').value = '';
             
             // Calculate total amount
@@ -710,6 +854,12 @@
         // Handle expense form submission
         document.getElementById('expenseForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const dateInput = document.getElementById('expenseDate');
+            if (!dateInput.value || dateInput.value.trim() === '') {
+                alert('Please enter the date.');
+                dateInput.focus();
+                return;
+            }
             const expenseType = document.getElementById('expenseType').value;
             
             // For Wages, submit to catering_wages table
@@ -721,11 +871,13 @@
                 
                 const date = document.getElementById('expenseDate').value;
                 const description = document.getElementById('expenseDescription').value;
+                const bookingId = document.getElementById('expenseBookingId').value || null;
                 
                 // Prepare wages data
                 const wagesData = {
                     date: date,
                     description: description,
+                    booking_id: bookingId || undefined,
                     wages: wagesEntries.map(entry => ({
                         employee_id: entry.employee_id,
                         employee_name: entry.employee_name,
@@ -804,48 +956,223 @@
         let currentBookingAmount = 0;
         let currentExistingTotal = 0;
 
-        // Make table rows clickable
+        // Booking search: filter table by search term (interactive)
+        const bookingSearchEl = document.getElementById('bookingSearch');
+        if (bookingSearchEl) {
+            bookingSearchEl.addEventListener('input', function() {
+                const q = this.value.trim().toLowerCase();
+                document.querySelectorAll('.booking-row').forEach(function(row) {
+                    const actionsRow = row.nextElementSibling;
+                    const rowText = (row.textContent || '').toLowerCase();
+                    const match = !q || rowText.indexOf(q) !== -1;
+                    row.style.display = match ? '' : 'none';
+                    if (actionsRow && actionsRow.classList.contains('booking-actions-row')) {
+                        if (!match) actionsRow.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Booking row: click to expand/collapse actions
         document.querySelectorAll('.booking-row').forEach(row => {
-            row.addEventListener('click', function() {
+            row.addEventListener('click', function(e) {
+                if (e.target.closest('button')) return;
+                const bookingId = this.dataset.bookingId;
+                const actionsRow = document.getElementById('booking-actions-' + bookingId);
+                if (!actionsRow) return;
+                const isHidden = actionsRow.style.display === 'none';
+                document.querySelectorAll('.booking-actions-row').forEach(r => { r.style.display = 'none'; });
+                document.querySelectorAll('.booking-row').forEach(r => { r.classList.remove('expanded'); });
+                if (isHidden) {
+                    actionsRow.style.display = 'table-row';
+                    this.classList.add('expanded');
+                }
+            });
+            row.addEventListener('mouseenter', function() { this.style.backgroundColor = 'rgba(255, 193, 7, 0.08)'; });
+            row.addEventListener('mouseleave', function() { this.style.backgroundColor = ''; });
+        });
+
+        // Add Payment: open Add Financial Transaction modal for this booking
+        document.querySelectorAll('.booking-action-payment').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const bookingId = this.dataset.bookingId;
                 const bookingName = this.dataset.bookingName;
                 const bookingItems = this.dataset.bookingItems;
-                
-                // Set modal values
                 document.getElementById('transactionBookingId').value = bookingId;
                 document.getElementById('transactionBookingName').value = `Booking #${bookingId} - ${bookingName}`;
                 const bookingAmount = extractBookingAmount(bookingItems);
                 currentBookingAmount = bookingAmount;
-
-                // Format with comma and 2 decimal places
                 document.getElementById('transactionBookingAmount').value = bookingAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-                // Fetch existing total transactions for this booking, then update running balance
                 fetch(`/catering/booking-transaction-total/${bookingId}`)
                     .then(res => res.json())
-                    .then(data => {
-                        currentExistingTotal = data.success ? (parseFloat(data.total) || 0) : 0;
-                        updateRunningBalance();
-                    })
-                    .catch(() => {
-                        currentExistingTotal = 0;
-                        updateRunningBalance();
-                    });
-                
-                // Leave date empty; user must enter transaction date
+                    .then(data => { currentExistingTotal = data.success ? (parseFloat(data.total) || 0) : 0; updateRunningBalance(); })
+                    .catch(() => { currentExistingTotal = 0; updateRunningBalance(); });
                 document.getElementById('transactionDate').value = '';
-                
-                // Show modal
                 new bootstrap.Modal(document.getElementById('addTransactionModal')).show();
             });
-            
-            // Add hover effect
-            row.addEventListener('mouseenter', function() {
-                this.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
+        });
+
+        // Add Wages: set booking ref and open expense modal (Wages)
+        document.querySelectorAll('.booking-action-wages').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                document.getElementById('expenseBookingId').value = this.dataset.bookingId || '';
+                document.getElementById('expenseType').value = 'Wages';
+                document.getElementById('expenseModalTitle').textContent = 'Add Wages';
+                document.getElementById('wagesEmployeeSection').style.display = 'block';
+                document.getElementById('regularAmountSection').style.display = 'none';
+                document.getElementById('remarksSection').style.display = 'none';
+                document.getElementById('expenseDescription').value = 'Wages';
+                document.getElementById('expenseDescription').readOnly = true;
+                wagesEntries = [];
+                document.getElementById('employeeWagesList').innerHTML = '';
+                document.getElementById('expenseAmount').value = '0.00';
+                document.getElementById('totalWagesAmount').value = '₱0.00';
+                document.getElementById('expenseDate').value = '';
+                new bootstrap.Modal(document.getElementById('expenseModal')).show();
             });
-            row.addEventListener('mouseleave', function() {
-                this.style.backgroundColor = '';
+        });
+
+        // Add Miscellaneous: set booking ref and open expense modal (Miscellaneous)
+        document.querySelectorAll('.booking-action-misc').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                document.getElementById('expenseBookingId').value = this.dataset.bookingId || '';
+                document.getElementById('expenseType').value = 'Miscellaneous';
+                document.getElementById('expenseModalTitle').textContent = 'Add Miscellaneous';
+                document.getElementById('wagesEmployeeSection').style.display = 'none';
+                document.getElementById('regularAmountSection').style.display = 'block';
+                document.getElementById('remarksSection').style.display = 'block';
+                document.getElementById('expenseDescription').value = '';
+                document.getElementById('expenseDescription').readOnly = false;
+                document.getElementById('expenseDate').value = '';
+                new bootstrap.Modal(document.getElementById('expenseModal')).show();
             });
+        });
+
+        // Add Purchases: store booking id and open purchases modal (initialized below)
+        document.querySelectorAll('.booking-action-purchases').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                window.currentPurchasesBookingId = this.dataset.bookingId || null;
+                openPurchasesModal();
+            });
+        });
+
+        // --- Purchases modal: open, add row, calc, save ---
+        async function openPurchasesModal() {
+            const dateEl = document.getElementById('purchasesDate');
+            dateEl.value = '';
+            document.getElementById('purchasesReference').value = '';
+            document.getElementById('purchasesTotal').value = '0.00';
+            const tbody = document.getElementById('purchasesModalTableBody');
+            tbody.innerHTML = `
+                <tr class="purchase-modal-row">
+                    <td><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
+                    <td><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
+                    <td><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger p-remove" style="display:none;">×</button></td>
+                </tr>
+            `;
+            attachPurchaseModalRowListeners();
+            document.getElementById('purchasesDate').addEventListener('change', function() {
+                fetch('{{ url_for("catering.next_purchase_reference") }}?date=' + encodeURIComponent(this.value))
+                    .then(r => r.json()).then(d => { if (d.success && d.referenceNumber) document.getElementById('purchasesReference').value = d.referenceNumber; });
+            });
+            new bootstrap.Modal(document.getElementById('purchasesModal')).show();
+        }
+        function attachPurchaseModalRowListeners() {
+            document.querySelectorAll('#purchasesModalTableBody .purchase-modal-row').forEach(row => {
+                const desc = row.querySelector('.p-desc');
+                const qty = row.querySelector('.p-qty');
+                const unit = row.querySelector('.p-unit');
+                const up = row.querySelector('.p-unitprice');
+                const amt = row.querySelector('.p-amount');
+                const rm = row.querySelector('.p-remove');
+                function calc() {
+                    const q = parseFloat(qty.value) || 0;
+                    const u = parseFloat(up.value) || 0;
+                    amt.value = (q * u).toFixed(2);
+                    updatePurchasesModalTotal();
+                }
+                qty.addEventListener('input', calc);
+                up.addEventListener('input', calc);
+                rm.addEventListener('click', function() { row.remove(); updatePurchasesModalTotal(); });
+                // Enter: move to next column; on Unit Price, Enter adds new row
+                desc.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') { e.preventDefault(); qty.focus(); }
+                });
+                qty.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') { e.preventDefault(); unit.focus(); }
+                });
+                unit.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') { e.preventDefault(); up.focus(); }
+                });
+                up.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('purchasesAddRow').click();
+                        const rows = document.querySelectorAll('#purchasesModalTableBody .purchase-modal-row');
+                        const newRow = rows[rows.length - 1];
+                        if (newRow) newRow.querySelector('.p-desc').focus();
+                    }
+                });
+            });
+            const rows = document.querySelectorAll('#purchasesModalTableBody .purchase-modal-row');
+            rows.forEach((r, i) => { r.querySelector('.p-remove').style.display = rows.length > 1 ? 'inline-block' : 'none'; });
+        }
+        function updatePurchasesModalTotal() {
+            let t = 0;
+            document.querySelectorAll('#purchasesModalTableBody .p-amount').forEach(inp => { t += parseFloat(inp.value) || 0; });
+            document.getElementById('purchasesTotal').value = t.toFixed(2);
+        }
+        document.getElementById('purchasesAddRow').addEventListener('click', function() {
+            const tbody = document.getElementById('purchasesModalTableBody');
+            const tr = document.createElement('tr');
+            tr.className = 'purchase-modal-row';
+            tr.innerHTML = `
+                <td><input type="text" class="form-control form-control-sm p-desc" placeholder="Description"></td>
+                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-qty" placeholder="0"></td>
+                <td><input type="text" class="form-control form-control-sm p-unit" placeholder="Unit"></td>
+                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm p-unitprice" placeholder="0"></td>
+                <td><input type="text" class="form-control form-control-sm p-amount" readonly placeholder="0"></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger p-remove">×</button></td>
+            `;
+            tbody.appendChild(tr);
+            attachPurchaseModalRowListeners();
+        });
+        document.getElementById('purchasesSaveBtn').addEventListener('click', function() {
+            const dateStr = document.getElementById('purchasesDate').value;
+            if (!dateStr) { alert('Please enter date.'); return; }
+            const ref = document.getElementById('purchasesReference').value.trim();
+            const items = [];
+            document.querySelectorAll('#purchasesModalTableBody .purchase-modal-row').forEach(row => {
+                const desc = (row.querySelector('.p-desc').value || '').trim();
+                const qty = parseFloat(row.querySelector('.p-qty').value) || 0;
+                const unit = (row.querySelector('.p-unit').value || '').trim();
+                const unitPrice = parseFloat(row.querySelector('.p-unitprice').value) || 0;
+                const amount = parseFloat(row.querySelector('.p-amount').value) || 0;
+                if (desc && qty > 0 && unitPrice > 0) items.push({ description: desc, qty: qty, unit: unit, unit_price: unitPrice, amount: amount || (qty * unitPrice) });
+            });
+            if (items.length === 0) { alert('Please add at least one item.'); return; }
+            const payload = { date: dateStr, reference_number: ref, items: items };
+            if (window.currentPurchasesBookingId) payload.booking_id = parseInt(window.currentPurchasesBookingId);
+            this.disabled = true;
+            fetch('{{ url_for("catering.add_purchases") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) { alert(data.message || 'Purchases saved.'); bootstrap.Modal.getInstance(document.getElementById('purchasesModal')).hide(); location.reload(); }
+                else { alert(data.error || 'Save failed.'); }
+            })
+            .catch(() => alert('Network error.'))
+            .finally(() => { this.disabled = false; });
         });
 
         // Function to calculate and update running balance

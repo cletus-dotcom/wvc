@@ -7,6 +7,15 @@
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .booking-row { cursor: pointer; }
+        .booking-row:hover { background-color: rgba(0,0,0,.04); }
+        .booking-row.expanded .expand-icon { transform: rotate(90deg); }
+        .expand-icon { transition: transform 0.2s ease; display: inline-block; }
+        .statement-detail { display: none; }
+        .statement-detail.show { display: table-row; }
+        .balance-table { margin: 0; background: #fff; }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -19,7 +28,7 @@
         </div>
         {% if selected_month %}
         <div>
-            <a href="{{ url_for('catering.export_balance_sheet_pdf', month=selected_month) }}" 
+            <a href="{{ url_for('catering.export_balance_sheet_pdf', month=selected_month) }}"
                class="btn btn-danger btn-sm" target="_blank">
                 <i class="bi bi-file-pdf"></i> Export PDF
             </a>
@@ -27,59 +36,46 @@
         {% endif %}
     </div>
 
-    <!-- Month Selection -->
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('catering.view_balance_sheet') }}" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label for="monthSelect" class="form-label fw-bold">Select Month</label>
-                    <select name="month" id="monthSelect" class="form-select" onchange="this.form.submit()">
-                        <option value="">All Months</option>
-                        {% for month_option in available_months %}
-                        <option value="{{ month_option.value }}" {% if selected_month == month_option.value %}selected{% endif %}>
-                            {{ month_option.label }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-warning">Filter</button>
-                </div>
+    <!-- Summary Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Summary</h5>
+            <form method="GET" action="{{ url_for('catering.view_balance_sheet') }}" class="d-flex flex-wrap align-items-center gap-2">
+                <label for="monthSelect" class="form-label mb-0 small fw-bold">Month</label>
+                <select name="month" id="monthSelect" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                    <option value="">All Months</option>
+                    {% for month_option in available_months %}
+                    <option value="{{ month_option.value }}" {% if selected_month == month_option.value %}selected{% endif %}>
+                        {{ month_option.label }}
+                    </option>
+                    {% endfor %}
+                </select>
                 {% if selected_month %}
-                <div class="col-md-6 text-end">
-                    <a href="{{ url_for('catering.view_balance_sheet') }}" class="btn btn-secondary btn-sm">Clear Filter</a>
-                </div>
+                <a href="{{ url_for('catering.view_balance_sheet') }}" class="btn btn-outline-dark btn-sm">Clear</a>
                 {% endif %}
             </form>
         </div>
-    </div>
-
-    <!-- Summary -->
-    <div class="card shadow-sm mb-3">
-        <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">Summary</h5>
-        </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-white">
                         <div class="text-muted small">Total Income</div>
                         <div class="fw-bold">₱{{ "{:,.2f}".format(summary.total_income) }}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-white">
                         <div class="text-muted small">Total Wages</div>
                         <div class="fw-bold">₱{{ "{:,.2f}".format(summary.total_wages) }}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-white">
                         <div class="text-muted small">Other Expenses</div>
                         <div class="fw-bold">₱{{ "{:,.2f}".format(summary.total_other_expenses) }}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-white">
                         <div class="text-muted small">Net</div>
                         <div class="fw-bold {% if summary.net < 0 %}text-danger{% else %}text-success{% endif %}">
@@ -91,77 +87,101 @@
         </div>
     </div>
 
-    <!-- Daily Details -->
+    <!-- Bookings List Card -->
     <div class="card shadow-sm">
         <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">Daily Details</h5>
+            <i class="bi bi-journal-bookmark me-2"></i>Bookings (Confirmed / Completed)
         </div>
-        <div class="card-body">
-            {% if daily_rows %}
-            <div class="table-responsive">
-                <table class="table table-bordered table-sm align-middle">
+        <div class="card-body p-0">
+            {% if booking_financials %}
+            <div class="p-3 border-bottom bg-light">
+                <label for="balanceSearch" class="form-label small fw-bold mb-1">Search bookings</label>
+                <input type="text" id="balanceSearch" class="form-control form-control-sm" placeholder="Filter by booking #, customer, event date, status…" autocomplete="off">
+            </div>
+            <div class="table-responsive table-responsive-mobile">
+                <table class="table table-bordered table-sm align-middle mb-0" id="balanceSheetTable">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 140px;">Date</th>
+                            <th style="width:40px;"></th>
+                            <th>Booking / Customer</th>
+                            <th>Event Date</th>
+                            <th>Event Time</th>
+                            <th>Status</th>
+                            <th class="text-end">Total Amount</th>
                             <th class="text-end">Income</th>
-                            <th class="text-end">Wages</th>
-                            <th class="text-end">Other Expenses</th>
-                            <th class="text-end">Total Expenses</th>
+                            <th class="text-end">Expenses</th>
                             <th class="text-end">Net</th>
-                            <th style="width: 110px;">Details</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for row in daily_rows %}
-                        {% set collapse_id = "dayDetails" ~ loop.index %}
-                        <tr>
-                            <td class="fw-bold">{{ row.date.strftime("%b %d, %Y") }}</td>
-                            <td class="text-end">₱{{ "{:,.2f}".format(row.income_total) }}</td>
-                            <td class="text-end">₱{{ "{:,.2f}".format(row.wages_total) }}</td>
-                            <td class="text-end">₱{{ "{:,.2f}".format(row.other_expenses_total) }}</td>
-                            <td class="text-end fw-bold">₱{{ "{:,.2f}".format(row.expense_total) }}</td>
-                            <td class="text-end fw-bold {% if row.net < 0 %}text-danger{% else %}text-success{% endif %}">
-                                ₱{{ "{:,.2f}".format(row.net) }}
+                        {% for item in booking_financials %}
+                        <tr class="booking-row align-middle" data-booking-id="{{ item.booking.id }}" role="button" tabindex="0" data-search-text="{{ item.booking.id }} {{ item.booking.requestor_name }} {{ item.booking.event_date.strftime('%b %d %Y') if item.booking.event_date else '' }} {{ item.booking.status or '' }}">
+                            <td><i class="bi bi-chevron-right expand-icon" aria-hidden="true"></i></td>
+                            <td>
+                                <div class="fw-bold">Booking #{{ item.booking.id }} — {{ item.booking.requestor_name }}</div>
+                                {% if item.booking.customer_address %}
+                                <div class="text-muted" style="font-size: 0.85rem;">{{ item.booking.customer_address }}</div>
+                                {% endif %}
                             </td>
-                            <td class="text-center">
-                                <button class="btn btn-outline-secondary btn-sm" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#{{ collapse_id }}">
-                                    View
-                                </button>
+                            <td>{{ item.booking.event_date.strftime('%b %d, %Y') if item.booking.event_date else '—' }}</td>
+                            <td>{{ item.booking.event_time.strftime('%I:%M %p') if item.booking.event_time else '—' }}</td>
+                            <td>
+                                <span class="badge {% if item.booking.status == 'Completed' %}bg-success{% elif item.booking.status == 'Confirmed' %}bg-primary{% else %}bg-secondary{% endif %}">{{ item.booking.status or '—' }}</span>
                             </td>
+                            <td class="text-end">₱{{ "{:,.2f}".format(item.total_amount) }}</td>
+                            <td class="text-end">₱{{ "{:,.2f}".format(item.income_total) }}</td>
+                            <td class="text-end">₱{{ "{:,.2f}".format(item.expense_total) }}</td>
+                            <td class="text-end fw-bold {% if item.net < 0 %}text-danger{% else %}text-success{% endif %}">₱{{ "{:,.2f}".format(item.net) }}</td>
                         </tr>
-                        <tr class="collapse" id="{{ collapse_id }}">
-                            <td colspan="7">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="fw-bold mb-2">Income (Booking Payments)</div>
-                                        {% if row.income_items %}
-                                        <ul class="mb-0">
-                                            {% for t in row.income_items %}
-                                            <li>
-                                                {{ t.trans_description }} — ₱{{ "{:,.2f}".format(t.trans_amount) }}
-                                                {% if t.booking_id %}<span class="text-muted">(Booking #{{ t.booking_id }})</span>{% endif %}
-                                            </li>
-                                            {% endfor %}
-                                        </ul>
-                                        {% else %}
-                                        <div class="text-muted">No income entries.</div>
-                                        {% endif %}
+                        <tr class="statement-detail" id="statement-{{ item.booking.id }}">
+                            <td colspan="9" class="p-0 bg-light">
+                                <div class="p-3">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="fw-bold mb-2 text-success">Income (Payments)</div>
+                                            {% if item.income_items %}
+                                            <table class="table table-sm balance-table table-bordered">
+                                                <thead class="table-light"><tr><th>Date</th><th>Description</th><th class="text-end">Amount</th></tr></thead>
+                                                <tbody>
+                                                    {% for t in item.income_items %}
+                                                    <tr>
+                                                        <td>{{ t.date.strftime('%b %d, %Y') if t.date else '—' }}</td>
+                                                        <td>{{ t.trans_description or '—' }}</td>
+                                                        <td class="text-end">₱{{ "{:,.2f}".format(t.trans_amount or 0) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot class="table-light"><tr><th colspan="2">Subtotal</th><th class="text-end">₱{{ "{:,.2f}".format(item.income_total) }}</th></tr></tfoot>
+                                            </table>
+                                            {% else %}
+                                            <p class="text-muted small mb-0">No income entries.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="fw-bold mb-2 text-danger">Expenses</div>
+                                            {% if item.expense_items %}
+                                            <table class="table table-sm balance-table table-bordered">
+                                                <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Description</th><th class="text-end">Amount</th></tr></thead>
+                                                <tbody>
+                                                    {% for e in item.expense_items %}
+                                                    <tr>
+                                                        <td>{{ e.date.strftime('%b %d, %Y') if e.date else '—' }}</td>
+                                                        <td><span class="badge {% if e.expense_type == 'Wages' %}bg-primary{% elif e.expense_type == 'Purchases' %}bg-info{% else %}bg-secondary{% endif %}">{{ e.expense_type }}</span></td>
+                                                        <td>{{ (e.description or '—')[:40] }}{% if e.description and e.description|length > 40 %}…{% endif %}</td>
+                                                        <td class="text-end">₱{{ "{:,.2f}".format(e.amount or 0) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot class="table-light"><tr><th colspan="3">Subtotal</th><th class="text-end">₱{{ "{:,.2f}".format(item.expense_total) }}</th></tr></tfoot>
+                                            </table>
+                                            {% else %}
+                                            <p class="text-muted small mb-0">No expense entries.</p>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="fw-bold mb-2">Expenses</div>
-                                        {% if row.expense_items %}
-                                        <ul class="mb-0">
-                                            {% for e in row.expense_items %}
-                                            <li>
-                                                {{ e.expense_type }} — ₱{{ "{:,.2f}".format(e.amount) }}
-                                                {% if e.description %}<span class="text-muted">({{ e.description }})</span>{% endif %}
-                                            </li>
-                                            {% endfor %}
-                                        </ul>
-                                        {% else %}
-                                        <div class="text-muted">No expense entries.</div>
-                                        {% endif %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        <strong>Booking net:</strong>
+                                        <span class="{% if item.net < 0 %}text-danger{% else %}text-success{% endif %}">₱{{ "{:,.2f}".format(item.net) }}</span>
                                     </div>
                                 </div>
                             </td>
@@ -170,9 +190,11 @@
                     </tbody>
                 </table>
             </div>
+            <div class="p-2 text-muted small" id="balanceSearchCount"></div>
             {% else %}
-            <div class="alert alert-info text-center mb-0">
-                <i class="bi bi-info-circle"></i> No data for the selected month.
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-inbox display-6"></i>
+                <p class="mb-0 mt-2">No Confirmed or Completed bookings.</p>
             </div>
             {% endif %}
         </div>
@@ -180,6 +202,63 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+(function() {
+    var table = document.getElementById('balanceSheetTable');
+    if (!table) return;
+
+    var searchInput = document.getElementById('balanceSearch');
+    var allRows = [];
+    var allDetailRows = [];
+    table.querySelectorAll('tbody tr').forEach(function(tr) {
+        if (tr.classList.contains('booking-row')) {
+            allRows.push(tr);
+            var id = tr.getAttribute('data-booking-id');
+            var detail = document.getElementById('statement-' + id);
+            if (detail) allDetailRows.push({ row: tr, detail: detail });
+        }
+    });
+
+    function filterTable() {
+        var q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
+        var visible = 0;
+        allDetailRows.forEach(function(pair) {
+            var text = (pair.row.getAttribute('data-search-text') || '').toLowerCase();
+            var show = !q || text.indexOf(q) !== -1;
+            pair.row.style.display = show ? '' : 'none';
+            if (!show) pair.detail.style.display = 'none';
+            else pair.detail.style.display = ''; // let .statement-detail / .show control visibility
+            if (show) visible++;
+        });
+        var countEl = document.getElementById('balanceSearchCount');
+        if (countEl) countEl.textContent = q ? 'Showing ' + visible + ' of ' + allRows.length + ' bookings' : '';
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTable);
+        searchInput.addEventListener('keyup', filterTable);
+    }
+
+    // Expand/collapse
+    document.querySelectorAll('.booking-row').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            if (this.style.display === 'none') return;
+            var id = this.getAttribute('data-booking-id');
+            var detail = document.getElementById('statement-' + id);
+            if (!detail) return;
+            var isHidden = !detail.classList.contains('show');
+            document.querySelectorAll('.statement-detail').forEach(function(r) { r.classList.remove('show'); });
+            document.querySelectorAll('.booking-row').forEach(function(r) { r.classList.remove('expanded'); });
+            if (isHidden) {
+                detail.classList.add('show');
+                this.classList.add('expanded');
+            }
+        });
+        row.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+        });
+    });
+})();
+</script>
 </body>
 </html>
-
