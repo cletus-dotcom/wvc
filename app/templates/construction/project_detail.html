@@ -6,6 +6,51 @@
     <title>{{ project.project_name }}</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-friendly.css') }}">
+    <style>
+        /* Materials entry table: wider columns on mobile for easier input */
+        @media (max-width: 575.98px) {
+            .materials-details-table.materials-details-table { min-width: 520px; }
+            .materials-details-table .materials-col-item { min-width: 140px; }
+            .materials-details-table .materials-col-qty { min-width: 72px; }
+            .materials-details-table .materials-col-unit { min-width: 80px; }
+            .materials-details-table .materials-col-unitprice { min-width: 95px; }
+            .materials-details-table .materials-col-total { min-width: 95px; }
+            .materials-details-table .materials-col-action { min-width: 70px; }
+        }
+        /* Labor entry table: wider columns on mobile */
+        @media (max-width: 575.98px) {
+            .labor-details-table.labor-details-table { min-width: 560px; }
+            .labor-details-table .labor-col-employee { min-width: 130px; }
+            .labor-details-table .labor-col-rate { min-width: 95px; }
+            .labor-details-table .labor-col-days { min-width: 85px; }
+            .labor-details-table .labor-col-overtime-hours { min-width: 95px; }
+            .labor-details-table .labor-col-overtime-amount { min-width: 95px; }
+            .labor-details-table .labor-col-row-total { min-width: 95px; }
+            .labor-details-table .labor-col-action { min-width: 70px; }
+        }
+        /* Documents entry table: wider columns on mobile */
+        @media (max-width: 575.98px) {
+            .documents-details-table.documents-details-table { min-width: 320px; }
+            .documents-details-table .documents-col-desc { min-width: 180px; }
+            .documents-details-table .documents-col-amount { min-width: 100px; }
+            .documents-details-table .documents-col-action { min-width: 70px; }
+        }
+        /* Obligation entry table: wider columns on mobile */
+        @media (max-width: 575.98px) {
+            .obligation-details-table.obligation-details-table { min-width: 320px; }
+            .obligation-details-table .obligation-col-desc { min-width: 180px; }
+            .obligation-details-table .obligation-col-amount { min-width: 100px; }
+            .obligation-details-table .obligation-col-action { min-width: 70px; }
+        }
+        /* Activity entry table: wider columns on mobile */
+        @media (max-width: 575.98px) {
+            .activity-details-table.activity-details-table { min-width: 380px; }
+            .activity-details-table .activity-col-desc { min-width: 140px; }
+            .activity-details-table .activity-col-datetime { min-width: 150px; }
+            .activity-details-table .activity-col-status { min-width: 110px; }
+            .activity-details-table .activity-col-action { min-width: 70px; }
+        }
+    </style>
 </head>
 <body class="bg-light">
 <div class="container container-mobile py-3 px-3">
@@ -138,36 +183,38 @@
 
     <p class="card-text">Add material details below:</p>
 
-    <table class="table table-sm table-bordered" id="materialsTable">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 35%;">Item</th>
-                <th style="width: 10%;">Qty</th>
-                <th style="width: 15%;">Unit</th>
-                <th style="width: 15%;">Unit Price</th>
-                <th style="width: 15%;">Total Amount</th>
-                <th style="width: 10%;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>
-                    <div class="position-relative">
-                        <input type="text" class="form-control item-input">
-                    </div>
-                </td>
-                <td><input type="number" class="form-control qty-input" min="0" step="0.001"></td>
-                <td>
-                    <div class="position-relative">
-                        <input type="text" class="form-control unit-input">
-                    </div>
-                </td>
-                <td><input type="number" class="form-control unit-price-input" min="0" step="0.01"></td>
-                <td><input type="text" class="form-control total-amount-input" readonly></td>
-                <td><button type="button" class="btn btn-sm btn-danger delete-row-btn">Delete</button></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="table-responsive table-responsive-mobile">
+        <table class="table table-sm table-bordered materials-details-table" id="materialsTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="materials-col-item">Item</th>
+                    <th class="materials-col-qty">Qty</th>
+                    <th class="materials-col-unit">Unit</th>
+                    <th class="materials-col-unitprice">Unit Price</th>
+                    <th class="materials-col-total">Total Amount</th>
+                    <th class="materials-col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="materials-col-item">
+                        <div class="position-relative">
+                            <input type="text" class="form-control item-input">
+                        </div>
+                    </td>
+                    <td class="materials-col-qty"><input type="number" class="form-control qty-input" min="0" step="0.001"></td>
+                    <td class="materials-col-unit">
+                        <div class="position-relative">
+                            <input type="text" class="form-control unit-input">
+                        </div>
+                    </td>
+                    <td class="materials-col-unitprice"><input type="number" class="form-control unit-price-input" min="0" step="0.01"></td>
+                    <td class="materials-col-total"><input type="text" class="form-control total-amount-input" readonly></td>
+                    <td class="materials-col-action"><button type="button" class="btn btn-sm btn-danger delete-row-btn">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </div>
 {% endif %}
@@ -234,34 +281,36 @@
         </div>
     </div>
 
-    <table class="table table-sm table-bordered" id="laborTable">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 28%;">Employee</th>
-                <th style="width: 12%;">Rate per Day</th>
-                <th style="width: 10%;">No. of Days</th>
-                <th style="width: 10%;">Overtime Hours</th>
-                <th style="width: 12%;">Overtime Amount</th>
-                <th style="width: 12%;">Labor Total Amount</th>
-                <th style="width: 8%;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>
-                    <select class="form-select form-select-sm employee-select">
-                        <option value="">-- Select employee --</option>
-                    </select>
-                </td>
-                <td><input class="form-control rate-input" readonly></td>
-                <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
-                <td><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
-                <td><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
-                <td><input class="form-control row-total" readonly></td>
-                <td><button type="button" class="btn btn-sm btn-danger del-labor-row">Delete</button></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="table-responsive table-responsive-mobile">
+        <table class="table table-sm table-bordered labor-details-table" id="laborTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="labor-col-employee">Employee</th>
+                    <th class="labor-col-rate">Rate per Day</th>
+                    <th class="labor-col-days">No. of Days</th>
+                    <th class="labor-col-overtime-hours">Overtime Hours</th>
+                    <th class="labor-col-overtime-amount">Overtime Amount</th>
+                    <th class="labor-col-row-total">Labor Total Amount</th>
+                    <th class="labor-col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="labor-col-employee">
+                        <select class="form-select form-select-sm employee-select">
+                            <option value="">-- Select employee --</option>
+                        </select>
+                    </td>
+                    <td class="labor-col-rate"><input class="form-control rate-input" readonly></td>
+                    <td class="labor-col-days"><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                    <td class="labor-col-overtime-hours"><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
+                    <td class="labor-col-overtime-amount"><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
+                    <td class="labor-col-row-total"><input class="form-control row-total" readonly></td>
+                    <td class="labor-col-action"><button type="button" class="btn btn-sm btn-danger del-labor-row">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </div>
 {% endif %}
@@ -288,22 +337,24 @@
         </div>
     </div>
 
-    <table class="table table-sm table-bordered" id="documentsTable">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 60%;">Document Description</th>
-                <th style="width: 30%;">Amount</th>
-                <th style="width: 10%;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><input type="text" class="form-control document-ref-input"></td>
-                <td><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
-                <td><button type="button" class="btn btn-sm btn-danger del-document-row">Delete</button></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="table-responsive table-responsive-mobile">
+        <table class="table table-sm table-bordered documents-details-table" id="documentsTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="documents-col-desc">Document Description</th>
+                    <th class="documents-col-amount">Amount</th>
+                    <th class="documents-col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="documents-col-desc"><input type="text" class="form-control document-ref-input"></td>
+                    <td class="documents-col-amount"><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
+                    <td class="documents-col-action"><button type="button" class="btn btn-sm btn-danger del-document-row">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </div>
 {% endif %}
@@ -330,22 +381,24 @@
         </div>
     </div>
 
-    <table class="table table-sm table-bordered" id="obligationTable">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 60%;">Obligation Description</th>
-                <th style="width: 30%;">Amount</th>
-                <th style="width: 10%;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><input type="text" class="form-control obligation-ref-input"></td>
-                <td><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
-                <td><button type="button" class="btn btn-sm btn-danger del-obligation-row">Delete</button></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="table-responsive table-responsive-mobile">
+        <table class="table table-sm table-bordered obligation-details-table" id="obligationTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="obligation-col-desc">Obligation Description</th>
+                    <th class="obligation-col-amount">Amount</th>
+                    <th class="obligation-col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="obligation-col-desc"><input type="text" class="form-control obligation-ref-input"></td>
+                    <td class="obligation-col-amount"><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
+                    <td class="obligation-col-action"><button type="button" class="btn btn-sm btn-danger del-obligation-row">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </div>
 {% endif %}
@@ -368,31 +421,33 @@
         </div>
     </div>
 
-    <table class="table table-sm table-bordered" id="activityTable">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 50%;">Activity Description</th>
-                <th style="width: 20%;">Activity Date & Time</th>
-                <th style="width: 20%;">Status</th>
-                <th style="width: 10%;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><input type="text" class="form-control activity-input"></td>
-                <td><input type="datetime-local" class="form-control activity-date-input"></td>
-                <td>
-                    <select class="form-control activity-status-input">
-                        <option value="Pending" selected>Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                        <option value="On Hold">On Hold</option>
-                    </select>
-                </td>
-                <td><button type="button" class="btn btn-sm btn-danger del-activity-row">Delete</button></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="table-responsive table-responsive-mobile">
+        <table class="table table-sm table-bordered activity-details-table" id="activityTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="activity-col-desc">Activity Description</th>
+                    <th class="activity-col-datetime">Activity Date & Time</th>
+                    <th class="activity-col-status">Status</th>
+                    <th class="activity-col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="activity-col-desc"><input type="text" class="form-control activity-input"></td>
+                    <td class="activity-col-datetime"><input type="datetime-local" class="form-control activity-date-input"></td>
+                    <td class="activity-col-status">
+                        <select class="form-control activity-status-input">
+                            <option value="Pending" selected>Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+                    </td>
+                    <td class="activity-col-action"><button type="button" class="btn btn-sm btn-danger del-activity-row">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </div>
 {% endif %}
@@ -759,20 +814,20 @@ document.addEventListener("DOMContentLoaded", async function () {
     function addMaterialRow(autoFocus = true) {
         const row = materialsTableBody.insertRow();
         row.innerHTML = `
-            <td>
+            <td class="materials-col-item">
                 <div class="position-relative">
                     <input type="text" class="form-control item-input">
                 </div>
             </td>
-            <td><input type="number" class="form-control qty-input" step="0.001"></td>
-            <td>
+            <td class="materials-col-qty"><input type="number" class="form-control qty-input" step="0.001"></td>
+            <td class="materials-col-unit">
                 <div class="position-relative">
                     <input type="text" class="form-control unit-input">
                 </div>
             </td>
-            <td><input type="number" class="form-control unit-price-input" step="0.01"></td>
-            <td><input type="text" class="form-control total-input" readonly></td>
-            <td><button class="btn btn-danger btn-sm del-row">Delete</button></td>
+            <td class="materials-col-unitprice"><input type="number" class="form-control unit-price-input" step="0.01"></td>
+            <td class="materials-col-total"><input type="text" class="form-control total-input" readonly></td>
+            <td class="materials-col-action"><button class="btn btn-danger btn-sm del-row">Delete</button></td>
         `;
 
         const item = row.querySelector(".item-input");
@@ -1099,20 +1154,20 @@ document.addEventListener("DOMContentLoaded", async function () {
                 materialDate.value = "";
                 materialsTableBody.innerHTML = `
                     <tr>
-                        <td>
+                        <td class="materials-col-item">
                             <div class="position-relative">
                                 <input type="text" class="form-control item-input">
                             </div>
                         </td>
-                        <td><input type="number" class="form-control qty-input" min="0" step="0.001"></td>
-                        <td>
+                        <td class="materials-col-qty"><input type="number" class="form-control qty-input" min="0" step="0.001"></td>
+                        <td class="materials-col-unit">
                             <div class="position-relative">
                                 <input type="text" class="form-control unit-input">
                             </div>
                         </td>
-                        <td><input type="number" class="form-control unit-price-input" min="0" step="0.01"></td>
-                        <td><input type="text" class="form-control total-amount-input" readonly></td>
-                        <td><button type="button" class="btn btn-sm btn-danger delete-row-btn">Delete</button></td>
+                        <td class="materials-col-unitprice"><input type="number" class="form-control unit-price-input" min="0" step="0.01"></td>
+                        <td class="materials-col-total"><input type="text" class="form-control total-amount-input" readonly></td>
+                        <td class="materials-col-action"><button type="button" class="btn btn-sm btn-danger delete-row-btn">Delete</button></td>
                     </tr>
                 `;
 
@@ -1289,15 +1344,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td>
+            <td class="labor-col-employee">
                 <select class="form-select form-select-sm employee-select">${getEmployeeOptionsHTML()}</select>
             </td>
-            <td><input class="form-control rate-input" readonly></td>
-            <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
-            <td><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
-            <td><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
-            <td><input class="form-control row-total" readonly></td>
-            <td><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
+            <td class="labor-col-rate"><input class="form-control rate-input" readonly></td>
+            <td class="labor-col-days"><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+            <td class="labor-col-overtime-hours"><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
+            <td class="labor-col-overtime-amount"><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
+            <td class="labor-col-row-total"><input class="form-control row-total" readonly></td>
+            <td class="labor-col-action"><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
         `;
         attachLaborRowEvents(row);
         
@@ -1370,15 +1425,15 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (!tbody) return;
             const newRow = tbody.insertRow();
             newRow.innerHTML = `
-                <td>
+                <td class="labor-col-employee">
                     <select class="form-select form-select-sm employee-select">${getEmployeeOptionsHTML()}</select>
                 </td>
-                <td><input class="form-control rate-input" readonly></td>
-                <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
-                <td><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
-                <td><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
-                <td><input class="form-control row-total" readonly></td>
-                <td><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
+                <td class="labor-col-rate"><input class="form-control rate-input" readonly></td>
+                <td class="labor-col-days"><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                <td class="labor-col-overtime-hours"><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
+                <td class="labor-col-overtime-amount"><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
+                <td class="labor-col-row-total"><input class="form-control row-total" readonly></td>
+                <td class="labor-col-action"><button type="button" class="btn btn-danger btn-sm del-labor-row">Delete</button></td>
             `;
             attachLaborRowEvents(newRow);
             setTimeout(() => {
@@ -1522,15 +1577,15 @@ document.addEventListener("DOMContentLoaded", async function () {
                 laborDate.value = "";
                 laborTable.querySelector("tbody").innerHTML = `
                     <tr>
-                        <td>
+                        <td class="labor-col-employee">
                             <select class="form-select form-select-sm employee-select">${getEmployeeOptionsHTML()}</select>
                         </td>
-                        <td><input class="form-control rate-input" readonly></td>
-                        <td><input type="number" class="form-control days-input" step="0.1" min="0"></td>
-                        <td><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
-                        <td><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
-                        <td><input class="form-control row-total" readonly></td>
-                        <td><button type="button" class="btn btn-sm btn-danger del-labor-row">Delete</button></td>
+                        <td class="labor-col-rate"><input class="form-control rate-input" readonly></td>
+                        <td class="labor-col-days"><input type="number" class="form-control days-input" step="0.1" min="0"></td>
+                        <td class="labor-col-overtime-hours"><input type="number" class="form-control overtime-hours-input" step="0.1" min="0" placeholder="0"></td>
+                        <td class="labor-col-overtime-amount"><input class="form-control overtime-amount-input" readonly placeholder="0.00"></td>
+                        <td class="labor-col-row-total"><input class="form-control row-total" readonly></td>
+                        <td class="labor-col-action"><button type="button" class="btn btn-sm btn-danger del-labor-row">Delete</button></td>
                     </tr>
                 `;
 
@@ -1754,9 +1809,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td><input type="text" class="form-control document-ref-input"></td>
-            <td><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
-            <td><button type="button" class="btn btn-danger btn-sm del-document-row">Delete</button></td>
+            <td class="documents-col-desc"><input type="text" class="form-control document-ref-input"></td>
+            <td class="documents-col-amount"><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
+            <td class="documents-col-action"><button type="button" class="btn btn-danger btn-sm del-document-row">Delete</button></td>
         `;
         attachDocumentRowEvents(row);
         
@@ -1892,9 +1947,9 @@ document.addEventListener("DOMContentLoaded", async function () {
                 documentsDate.value = "";
                 documentsTable.querySelector("tbody").innerHTML = `
                     <tr>
-                        <td><input type="text" class="form-control document-ref-input"></td>
-                        <td><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
-                        <td><button type="button" class="btn btn-sm btn-danger del-document-row">Delete</button></td>
+                        <td class="documents-col-desc"><input type="text" class="form-control document-ref-input"></td>
+                        <td class="documents-col-amount"><input type="number" class="form-control document-amount-input" min="0" step="0.01"></td>
+                        <td class="documents-col-action"><button type="button" class="btn btn-sm btn-danger del-document-row">Delete</button></td>
                     </tr>
                 `;
 
@@ -1943,9 +1998,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td><input type="text" class="form-control obligation-ref-input"></td>
-            <td><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
-            <td><button type="button" class="btn btn-danger btn-sm del-obligation-row">Delete</button></td>
+            <td class="obligation-col-desc"><input type="text" class="form-control obligation-ref-input"></td>
+            <td class="obligation-col-amount"><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
+            <td class="obligation-col-action"><button type="button" class="btn btn-danger btn-sm del-obligation-row">Delete</button></td>
         `;
         attachObligationRowEvents(row);
         
@@ -2082,9 +2137,9 @@ document.addEventListener("DOMContentLoaded", async function () {
                 obligationDate.value = "";
                 obligationTable.querySelector("tbody").innerHTML = `
                     <tr>
-                        <td><input type="text" class="form-control obligation-ref-input"></td>
-                        <td><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
-                        <td><button type="button" class="btn btn-sm btn-danger del-obligation-row">Delete</button></td>
+                        <td class="obligation-col-desc"><input type="text" class="form-control obligation-ref-input"></td>
+                        <td class="obligation-col-amount"><input type="number" class="form-control obligation-amount-input" min="0" step="0.01"></td>
+                        <td class="obligation-col-action"><button type="button" class="btn btn-sm btn-danger del-obligation-row">Delete</button></td>
                     </tr>
                 `;
 
@@ -2136,9 +2191,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td><input type="text" class="form-control activity-input"></td>
-            <td><input type="datetime-local" class="form-control activity-date-input"></td>
-            <td>
+            <td class="activity-col-desc"><input type="text" class="form-control activity-input"></td>
+            <td class="activity-col-datetime"><input type="datetime-local" class="form-control activity-date-input"></td>
+            <td class="activity-col-status">
                 <select class="form-control activity-status-input">
                     <option value="Pending" selected>Pending</option>
                     <option value="In Progress">In Progress</option>
@@ -2146,7 +2201,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                     <option value="On Hold">On Hold</option>
                 </select>
             </td>
-            <td><button type="button" class="btn btn-danger btn-sm del-activity-row">Delete</button></td>
+            <td class="activity-col-action"><button type="button" class="btn btn-danger btn-sm del-activity-row">Delete</button></td>
         `;
         attachActivityRowEvents(row);
         
@@ -2277,9 +2332,9 @@ document.addEventListener("DOMContentLoaded", async function () {
                 activityDate.value = "";
                 activityTable.querySelector("tbody").innerHTML = `
                     <tr>
-                        <td><input type="text" class="form-control activity-input"></td>
-                        <td><input type="datetime-local" class="form-control activity-date-input"></td>
-                        <td>
+                        <td class="activity-col-desc"><input type="text" class="form-control activity-input"></td>
+                        <td class="activity-col-datetime"><input type="datetime-local" class="form-control activity-date-input"></td>
+                        <td class="activity-col-status">
                             <select class="form-control activity-status-input">
                                 <option value="Pending" selected>Pending</option>
                                 <option value="In Progress">In Progress</option>
@@ -2287,7 +2342,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                                 <option value="On Hold">On Hold</option>
                             </select>
                         </td>
-                        <td><button type="button" class="btn btn-sm btn-danger del-activity-row">Delete</button></td>
+                        <td class="activity-col-action"><button type="button" class="btn btn-sm btn-danger del-activity-row">Delete</button></td>
                     </tr>
                 `;
 
